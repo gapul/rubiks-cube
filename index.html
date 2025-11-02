@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ルービックキューブ 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.18), transparent 50%),
+                        radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.14), transparent 55%),
+                        radial-gradient(circle at 50% 80%, rgba(0, 0, 0, 0.2), transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            gap: 24px;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            box-shadow: 0 24px 48px rgba(10, 10, 40, 0.35);
+            background: rgba(18, 24, 48, 0.6);
+            backdrop-filter: blur(6px);
+        }
+
+        #canvas-container::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            pointer-events: none;
+        }
+
+        #cube-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background-color: #1a1a2e;
+        }
+
+        #controls {
+            width: 320px;
+            max-width: 360px;
+            background: rgba(12, 14, 32, 0.65);
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(5, 5, 20, 0.35);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+            text-align: center;
+            font-size: 26px;
+            letter-spacing: 0.04em;
+            text-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+        }
+
+        .button-group h2 {
+            font-size: 18px;
+            margin-bottom: 2px;
+            color: #fff;
+            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        button.highlight {
+            background: linear-gradient(135deg, rgba(255, 240, 200, 0.35), rgba(255, 120, 120, 0.45));
+            border-color: rgba(255, 200, 180, 0.6);
+            font-weight: bold;
+            letter-spacing: 0.02em;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+
+        .solved {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            font-size: 12px;
+            line-height: 1.6;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+
+        .keyboard-hint {
+            margin-top: 10px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #9f7aea;
+        }
+
+        .history-list {
+            min-height: 48px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 12px;
+            font-family: "Fira Code", "Consolas", monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            word-break: break-all;
+            color: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+        }
+
+        .controls-column {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .hint {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        @media (max-width: 1100px) {
+            #container {
+                flex-direction: column;
+                height: auto;
+                padding: 20px;
+            }
+
+            #controls {
+                width: 100%;
+                max-width: none;
+                order: -1;
+            }
+
+            body {
+                overflow: auto;
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 22px;
+            }
+
+            .button-group h2 {
+                font-size: 16px;
+            }
+
+            .instructions {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-container">
+            <canvas id="cube-canvas"></canvas>
+        </div>
+        <div id="controls" class="controls-column">
+            <h1>🎲 ルービックキューブ</h1>
+
+            <div class="button-group">
+                <h2>スクランブルと操作</h2>
+                <label for="scramble-length">
+                    スクランブル手数: <strong id="scramble-length-value">20</strong>
+                </label>
+                <input type="range" id="scramble-length" min="5" max="40" value="20">
+                <div class="button-grid">
+                    <button id="scramble">🎲 ランダムスクランブル</button>
+                    <button id="undo" class="secondary">↩️ 一手戻す</button>
+                    <button id="reset-view" class="secondary">📷 ビューをリセット</button>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <h2>前面 (Front)</h2>
+                <div class="button-grid">
+                    <button id="F">F (前面時計回り)</button>
+                    <button id="F'">F' (前面反時計回り)</button>
+                    <button id="F2">F2 (前面180度)</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <h2>右面 (Right)</h2>
+                <div class="button-grid">
+                    <button id="R">R (右面時計回り)</button>
+                    <button id="R'">R' (右面反時計回り)</button>
+                    <button id="R2">R2 (右面180度)</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <h2>上面 (Up)</h2>
+                <div class="button-grid">
+                    <button id="U">U (上面時計回り)</button>
+                    <button id="U'">U' (上面反時計回り)</button>
+                    <button id="U2">U2 (上面180度)</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <h2>左面 (Left)</h2>
+                <div class="button-grid">
+                    <button id="L">L (左面時計回り)</button>
+                    <button id="L'">L' (左面反時計回り)</button>
+                    <button id="L2">L2 (左面180度)</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <h2>背面 (Back)</h2>
+                <div class="button-grid">
+                    <button id="B">B (背面時計回り)</button>
+                    <button id="B'">B' (背面反時計回り)</button>
+                    <button id="B2">B2 (背面180度)</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <h2>底面 (Down)</h2>
+                <div class="button-grid">
+                    <button id="D">D (底面時計回り)</button>
+                    <button id="D'">D' (底面反時計回り)</button>
+                    <button id="D2">D2 (底面180度)</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <div class="button-grid">
+                    <button id="reset" class="highlight">🔄 リセット</button>
+                </div>
+            </div>
+
+            <div id="status">
+                <div id="status-text">状態: 解かれています</div>
+                <div id="move-counter">手数: 0</div>
+                <div id="last-move" class="hint">直近の操作: なし</div>
+            </div>
+
+            <div class="button-group">
+                <h2>操作履歴</h2>
+                <div id="history-list" class="history-list">まだ動きがありません</div>
+            </div>
+
+            <div class="instructions">
+                <strong>操作説明:</strong><br>
+                • マウスでドラッグして回転<br>
+                • マウスホイールでズーム<br>
+                • キーボードショートカットも利用可能<br>
+                • ボタンまたはキーでキューブを回転
+                
+                <div class="keyboard-hint">
+                    <strong>キーボード:</strong><br>
+                    F/R/U/B/L/D + Shift (反時計回り) + Alt (180度)
+                </div>
+                <div class="keyboard-hint">
+                    スクランブルや一手戻しで練習を効率化できます。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
