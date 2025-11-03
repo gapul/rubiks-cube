@@ -142,6 +142,7 @@ let lastActionLabel = "なし";
 let autoSolveInProgress = false;
 let scrambleInProgress = false;
 let isResettingView = false;
+let fullMoveLog = [];
 
 let pointerDownInfo = null;
 let pointerMoved = false;
@@ -672,6 +673,15 @@ function clampIndex(value) {
 }
 
 function handleMoveCompletion(moveKey, options) {
+  options = options || {};
+
+  if (
+    !autoSolveInProgress &&
+    (options.record || options.source === "scramble")
+  ) {
+    fullMoveLog.push(moveKey);
+  }
+
   if (options.record) {
     moveHistory.push(moveKey);
     lastActionLabel = moveKey;
@@ -700,15 +710,11 @@ function handleMoveCompletion(moveKey, options) {
   }
 
   if (autoSolveInProgress && moveQueue.length === 0) {
-    autoSolveInProgress = false;
-    moveHistory = [];
-    scrambleSequence = [];
-    lastActionLabel = "オートソルブ完了";
-    stopTimer();
-    elapsedMs = 0;
-    resetView();
-    updateTimerDisplay();
+    finalizeAutoSolve();
+    return;
   }
+
+  updateStatus();
 }
 
 function scrambleCube() {
@@ -756,6 +762,10 @@ function undoLastMove() {
     return;
   }
 
+  if (fullMoveLog.length > 0) {
+    fullMoveLog.pop();
+  }
+
   enqueueMove(inverse, { record: false, source: "undo", undoneMove: lastMove });
   updateStatus();
 }
@@ -771,34 +781,14 @@ async function autoSolve() {
   try {
     solutionMoves = await solveOptimal({
       state,
-      history: moveHistory,
-      scramble: scrambleSequence,
+      log: fullMoveLog,
     });
   } catch (error) {
     console.warn("Optimal solver failed, falling back to recorded history.", error);
   }
 
   if (!solutionMoves || solutionMoves.length === 0) {
-    const manualInverses = moveHistory
-      .slice()
-      .reverse()
-      .map(inverseMoveKey);
-    const scrambleInverses = scrambleSequence
-      .slice()
-      .reverse()
-      .map(inverseMoveKey);
-    solutionMoves = manualInverses.concat(scrambleInverses);
-  }
-
-  if (!solutionMoves || solutionMoves.length === 0) {
-    autoSolveInProgress = false;
-    scrambleInProgress = false;
-    moveHistory = [];
-    scrambleSequence = [];
-    stopTimer();
-    elapsedMs = 0;
-    resetView();
-    updateStatus();
+    finalizeAutoSolve();
     return;
   }
 
@@ -845,6 +835,22 @@ function resetView() {
   }
 
   requestAnimationFrame(animateReset);
+}
+
+function finalizeAutoSolve() {
+  autoSolveInProgress = false;
+  scrambleInProgress = false;
+  stopTimer();
+  elapsedMs = 0;
+  updateTimerDisplay();
+  cube.reset();
+  createCube();
+  moveHistory = [];
+  scrambleSequence = [];
+  fullMoveLog = [];
+  lastActionLabel = "オートソルブ完了";
+  updateStatus();
+  resetView();
 }
 
 function animate() {

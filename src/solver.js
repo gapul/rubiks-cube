@@ -78,16 +78,14 @@ function compressMoves(moves) {
     .map(normalizeMoveKey);
 }
 
-function deriveSolutionFromHistory(history = [], scramble = []) {
-  const manualInverses = history.slice().reverse().map(inverseMove);
-  const scrambleInverses = scramble.slice().reverse().map(inverseMove);
-  const combined = manualInverses.concat(scrambleInverses);
-  return compressMoves(combined);
+function deriveSolutionFromLog(log = []) {
+  if (!Array.isArray(log) || log.length === 0) {
+    return [];
+  }
+  const inverses = log.slice().reverse().map(inverseMove);
+  return compressMoves(inverses);
 }
 
-export async function solveOptimal({ state, history, scramble }) {
-  // Currently derive a precise solution by reversing recorded moves and
-  // trimming redundant turns. This guarantees restoration to the solved state
-  // even for mixed interaction sources.
-  return deriveSolutionFromHistory(history, scramble);
+export async function solveOptimal({ log = [] } = {}) {
+  return deriveSolutionFromLog(log);
 }
