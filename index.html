@@ -20,6 +20,7 @@
       --accent: #8b9dff;
       --accent-strong: #6c79ff;
       --danger: rgba(255, 120, 120, 0.48);
+      --solved-color: #52e0a1;
       --panel-radius: 20px;
       --transition: 160ms ease;
       font-family: "Inter", "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
@@ -40,6 +41,7 @@
       --accent: #5664ff;
       --accent-strong: #3a4cff;
       --danger: rgba(255, 120, 140, 0.36);
+      --solved-color: #1c7a4d;
     }
 
     * {
@@ -168,10 +170,11 @@
 
     .control-panel {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 12px;
       min-height: 0;
-      align-content: flex-start;
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .control-card {
@@ -182,8 +185,7 @@
       border-radius: var(--panel-radius);
       background: var(--surface-primary);
       border: 1px solid var(--border-subtle);
-      flex: 1 1 320px;
-      min-width: 280px;
+      width: 100%;
     }
 
     .control-card header {
@@ -317,6 +319,7 @@
       background: var(--surface-secondary);
       border: 1px solid var(--border-subtle);
       font-size: 14px;
+      width: 100%;
     }
 
     .status-header {
@@ -332,7 +335,7 @@
     }
 
     .solved {
-      color: #52e0a1;
+      color: var(--solved-color);
     }
 
     .status-meta {
@@ -401,26 +404,12 @@
         height: auto;
         min-height: 100vh;
       }
-
-      .control-panel {
-        justify-content: center;
-      }
-
-      .control-card {
-        flex: 1 1 360px;
-        min-width: 260px;
-      }
     }
 
     @media (max-width: 640px) {
       .app-shell {
         padding: 10px;
         grid-template-rows: minmax(280px, 0.7fr) minmax(0, 1fr);
-      }
-
-      .control-card {
-        flex: 1 1 100%;
-        min-width: 0;
       }
 
       .control-card header {
@@ -450,10 +439,12 @@
           📷 ビューリセット
         </button>
       </div>
+      <!--
       <div class="stage-footer">
         <span class="hint">クリックで面を操作 (Shift:逆回転 / Alt:180°)</span>
         <span class="hint">慣性付きドラッグで視点を移動できます</span>
       </div>
+      -->
     </section>
 
     <aside class="control-panel">
