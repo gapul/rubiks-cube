@@ -45,12 +45,12 @@ const INVERSE_MOVE_MAP = {
 };
 
 const FACE_ROTATION_CONFIG = {
-  F: { axis: "z", level: 2, direction: -1 },
-  B: { axis: "z", level: 0, direction: -1 },
-  R: { axis: "x", level: 2, direction: 1 },
-  L: { axis: "x", level: 0, direction: -1 },
-  U: { axis: "y", level: 2, direction: 1 },
-  D: { axis: "y", level: 0, direction: -1 },
+  F: { axis: "z", level: 2, clockwiseAngle: -Math.PI / 2 },
+  B: { axis: "z", level: 0, clockwiseAngle: Math.PI / 2 },
+  R: { axis: "x", level: 2, clockwiseAngle: Math.PI / 2 },
+  L: { axis: "x", level: 0, clockwiseAngle: -Math.PI / 2 },
+  U: { axis: "y", level: 2, clockwiseAngle: -Math.PI / 2 },
+  D: { axis: "y", level: 0, clockwiseAngle: Math.PI / 2 },
 };
 
 const SCRAMBLE_MOVES = Object.keys(MOVE_KEY_TO_ENUM);
@@ -142,6 +142,7 @@ let moveQueue = [];
 let scrambleSequence = [];
 let lastActionLabel = "なし";
 let autoSolveInProgress = false;
+let scrambleInProgress = false;
 
 let pointerDownInfo = null;
 let pointerMoved = false;
@@ -594,7 +595,7 @@ function animateMove(moveKey, options) {
     rotationGroup.attach(cubie);
   });
 
-  const targetAngle = computeTargetAngle(moveKey, faceConfig.direction);
+  const targetAngle = computeTargetAngle(moveKey, faceConfig.clockwiseAngle);
   const duration = getAnimationDuration(moveKey);
   const startTime = performance.now();
 
@@ -619,8 +620,8 @@ function animateMove(moveKey, options) {
   requestAnimationFrame(step);
 }
 
-function computeTargetAngle(moveKey, direction) {
-  const baseAngle = -direction * (Math.PI / 2);
+function computeTargetAngle(moveKey, clockwiseAngle) {
+  let baseAngle = clockwiseAngle;
 
   if (moveKey.endsWith("2")) {
     return baseAngle * 2;
@@ -697,6 +698,13 @@ function handleMoveCompletion(moveKey, options) {
       options.source === "autoSolve" ? "オートソルブ実行中" : moveKey;
   }
 
+  if (scrambleInProgress && moveQueue.length === 0 && !autoSolveInProgress) {
+    scrambleInProgress = false;
+    elapsedMs = 0;
+    startTimer();
+    lastActionLabel = "スクランブル完了";
+  }
+
   if (!autoSolveInProgress && cube.is_solved()) {
     stopTimer();
   }
@@ -736,6 +744,7 @@ function scrambleCube() {
   moveHistory = [];
   lastActionLabel = "スクランブル準備中";
   autoSolveInProgress = false;
+  scrambleInProgress = true;
   resetTimer();
   updateStatus();
 
@@ -781,6 +790,7 @@ function autoSolve() {
   }
 
   autoSolveInProgress = true;
+  scrambleInProgress = false;
   stopTimer();
   solution.forEach((moveKey) => {
     enqueueMove(moveKey, { record: false, source: "autoSolve" });
@@ -795,6 +805,7 @@ function resetCube() {
   scrambleSequence = [];
   lastActionLabel = "リセット";
   autoSolveInProgress = false;
+  scrambleInProgress = false;
   resetTimer();
   createCube();
   updateStatus();
@@ -1056,7 +1067,12 @@ function resetTimer() {
 }
 
 function startTimerIfNeeded() {
-  if (!autoSolveInProgress && !timerRunning && elapsedMs === 0) {
+  if (
+    !autoSolveInProgress &&
+    !scrambleInProgress &&
+    !timerRunning &&
+    elapsedMs === 0
+  ) {
     startTimer();
   }
 }
