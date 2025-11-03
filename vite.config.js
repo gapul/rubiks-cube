@@ -3,10 +3,10 @@ import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
 
 export default defineConfig({
+  base: '/rubiks-cube/',
   plugins: [wasm(), topLevelAwait()],
   server: {
     port: 3000,
     host: true
   }
 });
-
