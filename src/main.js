@@ -730,7 +730,6 @@ function scrambleCube() {
   }
 
   scrambleSequence = sequence.slice();
-  moveHistory = [];
   lastActionLabel = "スクランブル準備中";
   autoSolveInProgress = false;
   scrambleInProgress = true;
