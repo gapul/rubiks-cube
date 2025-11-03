@@ -212,7 +212,9 @@ function initThreeJS() {
   }
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.06;
-  renderer.physicallyCorrectLights = true;
+  if ("useLegacyLights" in renderer) {
+    renderer.useLegacyLights = false;
+  }
   renderer.domElement.style.touchAction = "none";
 
   orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -531,7 +533,7 @@ function applyTheme(mode) {
 function enqueueMove(moveKey, options = {}) {
   const normalizedMove = normalizeMoveKey(moveKey);
   const mappedMove = MOVE_KEY_TO_ENUM[normalizedMove];
-  if (!mappedMove) {
+  if (mappedMove === undefined) {
     console.warn("Unknown move requested:", moveKey);
     return;
   }
