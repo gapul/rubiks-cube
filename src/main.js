@@ -434,13 +434,6 @@ function setupControls() {
     }
   });
 
-  const resetCubeButton = document.getElementById("reset");
-  resetCubeButton?.addEventListener("click", () => {
-    if (!isAnimating) {
-      resetCube();
-    }
-  });
-
   const autoSolveButton = document.getElementById("auto-solve");
   autoSolveButton?.addEventListener("click", () => {
     if (!isAnimating && moveQueue.length === 0) {
@@ -711,6 +704,7 @@ function handleMoveCompletion(moveKey, options) {
     lastActionLabel = "オートソルブ完了";
     stopTimer();
     elapsedMs = 0;
+    resetView();
     updateTimerDisplay();
   }
 }
@@ -796,6 +790,14 @@ async function autoSolve() {
   }
 
   if (!solutionMoves || solutionMoves.length === 0) {
+    autoSolveInProgress = false;
+    scrambleInProgress = false;
+    moveHistory = [];
+    scrambleSequence = [];
+    stopTimer();
+    elapsedMs = 0;
+    resetView();
+    updateStatus();
     return;
   }
 
@@ -806,20 +808,6 @@ async function autoSolve() {
     enqueueMove(moveKey, { record: false, source: "autoSolve" });
   });
   updateStatus();
-}
-
-function resetCube() {
-  moveQueue.length = 0;
-  cube.reset();
-  moveHistory = [];
-  scrambleSequence = [];
-  lastActionLabel = "リセット";
-  autoSolveInProgress = false;
-  scrambleInProgress = false;
-  resetTimer();
-  createCube();
-  updateStatus();
-  renderScene();
 }
 
 function resetView() {

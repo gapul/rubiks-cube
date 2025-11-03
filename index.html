@@ -71,12 +71,12 @@
     }
 
     .app-shell {
-      width: min(1100px, 100%);
+      width: min(1160px, 100%);
       height: 100vh;
-      padding: clamp(12px, 1.6vw, 18px);
+      padding: clamp(10px, 1.5vw, 18px);
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
-      gap: clamp(12px, 1.4vw, 18px);
+      grid-template-columns: minmax(0, 1.1fr) minmax(300px, 1fr);
+      gap: clamp(10px, 1.4vw, 18px);
       position: relative;
       z-index: 1;
     }
@@ -89,7 +89,7 @@
     .stage {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     .canvas-wrap {
@@ -140,20 +140,13 @@
     }
 
     .control-panel {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      grid-auto-rows: min-content;
       gap: 12px;
       min-height: 0;
       overflow: hidden;
-    }
-
-    .control-panel-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      min-height: 0;
-      overflow: auto;
-      padding-right: 4px;
+      align-content: start;
     }
 
     .control-card {
@@ -164,7 +157,6 @@
       border-radius: var(--panel-radius);
       background: var(--surface-primary);
       border: 1px solid var(--border-subtle);
-      flex-shrink: 0;
     }
 
     .control-card header {
@@ -378,23 +370,24 @@
     @media (max-width: 1080px) {
       .app-shell {
         grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(320px, 0.8fr) minmax(0, 1fr);
         height: auto;
         min-height: 100vh;
       }
 
-      .stage {
-        min-height: 320px;
-      }
-
       .control-panel {
-        order: -1;
-        max-height: 45vh;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       }
     }
 
     @media (max-width: 640px) {
       .app-shell {
         padding: 10px;
+        grid-template-rows: minmax(280px, 0.7fr) minmax(0, 1fr);
+      }
+
+      .control-panel {
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .control-card header {
@@ -428,114 +421,111 @@
     </section>
 
     <aside class="control-panel">
-      <div class="control-panel-inner">
-        <section class="control-card">
-          <header>
-            <h2>操作パネル</h2>
-            <span>スクランブル・ビュー・テーマを一括操作</span>
-          </header>
-          <div class="theme-controls" role="group" aria-label="テーマ設定">
-            <button type="button" class="theme-control" data-theme-mode="system" aria-pressed="false">
-              システム
-            </button>
-            <button type="button" class="theme-control" data-theme-mode="light" aria-pressed="false">
-              ライト
-            </button>
-            <button type="button" class="theme-control" data-theme-mode="dark" aria-pressed="true">
-              ダーク
-            </button>
-          </div>
-          <div class="range-field">
-            <label for="scramble-length">
-              スクランブル手数
-              <strong id="scramble-length-value">20</strong>
-            </label>
-            <input type="range" id="scramble-length" min="5" max="40" value="20" />
-          </div>
-          <div class="range-field">
-            <label for="animation-speed">
-              アニメーション速度
-              <strong id="animation-speed-value">1.0x</strong>
-            </label>
-            <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0" />
-          </div>
-          <div class="button-grid">
-            <button id="scramble">🎲 スクランブル</button>
-            <button id="undo" class="secondary">↩️ 一手戻す</button>
-            <button id="auto-solve" class="accent">🤖 オートソルブ</button>
-            <button id="reset-view" class="secondary">📷 ビューリセット</button>
-            <button id="reset" class="highlight">🔄 リセット</button>
-          </div>
-        </section>
+      <section class="control-card">
+        <header>
+          <h2>操作パネル</h2>
+          <span>スクランブル・ビュー・テーマを一括操作</span>
+        </header>
+        <div class="theme-controls" role="group" aria-label="テーマ設定">
+          <button type="button" class="theme-control" data-theme-mode="system" aria-pressed="false">
+            システム
+          </button>
+          <button type="button" class="theme-control" data-theme-mode="light" aria-pressed="false">
+            ライト
+          </button>
+          <button type="button" class="theme-control" data-theme-mode="dark" aria-pressed="true">
+            ダーク
+          </button>
+        </div>
+        <div class="range-field">
+          <label for="scramble-length">
+            スクランブル手数
+            <strong id="scramble-length-value">20</strong>
+          </label>
+          <input type="range" id="scramble-length" min="5" max="40" value="20" />
+        </div>
+        <div class="range-field">
+          <label for="animation-speed">
+            アニメーション速度
+            <strong id="animation-speed-value">1.0x</strong>
+          </label>
+          <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0" />
+        </div>
+        <div class="button-grid">
+          <button id="scramble">🎲 スクランブル</button>
+          <button id="undo" class="secondary">↩️ 一手戻す</button>
+          <button id="auto-solve" class="accent">🤖 オートソルブ</button>
+          <button id="reset-view" class="secondary">📷 ビューリセット</button>
+        </div>
+      </section>
 
-        <section class="control-card">
-          <header>
-            <h2>面操作</h2>
-            <span>ボタンまたはキーボードで面を回転</span>
-          </header>
-          <div class="button-grid">
-            <button id="F">F</button>
-            <button id="F'">F'</button>
-            <button id="F2">F2</button>
-            <button id="R">R</button>
-            <button id="R'">R'</button>
-            <button id="R2">R2</button>
-            <button id="U">U</button>
-            <button id="U'">U'</button>
-            <button id="U2">U2</button>
-            <button id="L">L</button>
-            <button id="L'">L'</button>
-            <button id="L2">L2</button>
-            <button id="B">B</button>
-            <button id="B'">B'</button>
-            <button id="B2">B2</button>
-            <button id="D">D</button>
-            <button id="D'">D'</button>
-            <button id="D2">D2</button>
-          </div>
-        </section>
+      <section class="control-card">
+        <header>
+          <h2>面操作</h2>
+          <span>ボタンまたはキーボードで面を回転</span>
+        </header>
+        <div class="button-grid">
+          <button id="F">F</button>
+          <button id="F'">F'</button>
+          <button id="F2">F2</button>
+          <button id="R">R</button>
+          <button id="R'">R'</button>
+          <button id="R2">R2</button>
+          <button id="U">U</button>
+          <button id="U'">U'</button>
+          <button id="U2">U2</button>
+          <button id="L">L</button>
+          <button id="L'">L'</button>
+          <button id="L2">L2</button>
+          <button id="B">B</button>
+          <button id="B'">B'</button>
+          <button id="B2">B2</button>
+          <button id="D">D</button>
+          <button id="D'">D'</button>
+          <button id="D2">D2</button>
+        </div>
+      </section>
 
-        <section class="status-card" id="status">
-          <div class="status-header">
-            <span id="status-text">状態: 解かれています</span>
-            <div class="status-extras">
-              <span class="status-chip" id="timer-display">00:00.0</span>
-              <span class="status-chip" id="queue-indicator">待機中の操作: 0</span>
-            </div>
+      <section class="status-card" id="status">
+        <div class="status-header">
+          <span id="status-text">状態: 解かれています</span>
+          <div class="status-extras">
+            <span class="status-chip" id="timer-display">00:00.0</span>
+            <span class="status-chip" id="queue-indicator">待機中の操作: 0</span>
           </div>
-          <div class="status-meta">
-            <span id="move-counter">手数: 0</span>
-            <span id="last-move">直近の操作: なし</span>
+        </div>
+        <div class="status-meta">
+          <span id="move-counter">手数: 0</span>
+          <span id="last-move">直近の操作: なし</span>
+        </div>
+        <div>
+          <strong>操作履歴</strong>
+        </div>
+        <div id="history-list" class="history-list">まだ動きがありません</div>
+      </section>
+
+      <section class="control-card">
+        <header>
+          <h2>ヒント</h2>
+          <span>キーボードとマウスで直感的に操作</span>
+        </header>
+        <div class="instructions">
+          <div>
+            <strong>マウス・タッチ操作</strong><br />
+            • 左ドラッグ: 慣性付きで視点を回転<br />
+            • ホイール: ズームイン / ズームアウト<br />
+            • キューブをクリック: その面を回転 (Shiftで反時計回り / Altで180度)
           </div>
           <div>
-            <strong>操作履歴</strong>
+            <strong>キーボード</strong><br />
+            F / R / U / B / L / D で各面を時計回り<br />
+            Shift + キーで反時計回り / Alt + キーで180度
           </div>
-          <div id="history-list" class="history-list">まだ動きがありません</div>
-        </section>
-
-        <section class="control-card">
-          <header>
-            <h2>ヒント</h2>
-            <span>キーボードとマウスで直感的に操作</span>
-          </header>
-          <div class="instructions">
-            <div>
-              <strong>マウス・タッチ操作</strong><br />
-              • 左ドラッグ: 慣性付きで視点を回転<br />
-              • ホイール: ズームイン / ズームアウト<br />
-              • キューブをクリック: その面を回転 (Shiftで反時計回り / Altで180度)
-            </div>
-            <div>
-              <strong>キーボード</strong><br />
-              F / R / U / B / L / D で各面を時計回り<br />
-              Shift + キーで反時計回り / Alt + キーで180度
-            </div>
-            <div class="hint">
-              スクランブル後にタイマーがスタートし、解けた瞬間に自動停止します。オートソルブは現在の状態から最適解で復元します。
-            </div>
+          <div class="hint">
+            スクランブル後にタイマーがスタートし、解けた瞬間に自動停止します。オートソルブは現在の状態から最適解で復元し、ビューも自動でリセットされます。
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </aside>
   </div>
 
