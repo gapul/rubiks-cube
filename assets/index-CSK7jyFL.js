@@ -11133,7 +11133,7 @@ function _m(i, e) {
 }
 async function Il(i) {
   if (Mt !== void 0) return Mt;
-  typeof i < "u" && (Object.getPrototypeOf(i) === Object.prototype ? { module_or_path: i } = i : console.warn("using deprecated parameters for the initialization function; pass a single object instead")), typeof i > "u" && (i = new URL("/assets/rubiks_cube_wasm_bg-BDAcHeXg.wasm", import.meta.url));
+  typeof i < "u" && (Object.getPrototypeOf(i) === Object.prototype ? { module_or_path: i } = i : console.warn("using deprecated parameters for the initialization function; pass a single object instead")), typeof i > "u" && (i = new URL("/rubiks-cube/assets/rubiks_cube_wasm_bg-BDAcHeXg.wasm", import.meta.url));
   const e = gm();
   (typeof i == "string" || typeof Request == "function" && i instanceof Request || typeof URL == "function" && i instanceof URL) && (i = fetch(i));
   const { instance: t, module: n } = await mm(await i, e);
