@@ -1,375 +1,522 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ルービックキューブ 3D</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ルービックキューブ 3D</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-gradient: radial-gradient(circle at 20% 20%, rgba(120, 146, 255, 0.18), transparent 55%), radial-gradient(circle at 80% 10%, rgba(255, 120, 210, 0.16), transparent 60%), linear-gradient(140deg, #0b1024 0%, #141835 38%, #04060f 100%);
+      --surface-primary: rgba(20, 24, 44, 0.78);
+      --surface-secondary: rgba(30, 36, 62, 0.65);
+      --surface-tertiary: rgba(18, 22, 40, 0.55);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --text-primary: #f5f7ff;
+      --text-secondary: rgba(245, 247, 255, 0.72);
+      --text-muted: rgba(245, 247, 255, 0.56);
+      --accent: #8b9dff;
+      --accent-strong: #6c79ff;
+      --danger: rgba(255, 120, 120, 0.48);
+      --shadow-soft: 0 26px 48px rgba(4, 6, 15, 0.55);
+      --shadow-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      --panel-radius: 24px;
+      --transition: 200ms ease;
+      font-family: "Inter", "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            overflow: hidden;
-            min-height: 100vh;
-            position: relative;
-        }
+    body[data-theme="light"] {
+      color-scheme: light;
+      --bg-gradient: radial-gradient(circle at 15% 20%, rgba(180, 205, 255, 0.55), transparent 60%), radial-gradient(circle at 82% 0%, rgba(255, 180, 220, 0.4), transparent 60%), linear-gradient(140deg, #e6ecff 0%, #ffffff 40%, #f2f4ff 100%);
+      --surface-primary: rgba(255, 255, 255, 0.85);
+      --surface-secondary: rgba(244, 246, 255, 0.82);
+      --surface-tertiary: rgba(236, 240, 255, 0.6);
+      --border-subtle: rgba(15, 18, 40, 0.08);
+      --border-strong: rgba(15, 18, 40, 0.12);
+      --text-primary: #161a33;
+      --text-secondary: rgba(30, 34, 62, 0.78);
+      --text-muted: rgba(30, 34, 62, 0.55);
+      --accent: #5a6bff;
+      --accent-strong: #394bff;
+      --danger: rgba(255, 108, 128, 0.38);
+      --shadow-soft: 0 26px 48px rgba(40, 56, 120, 0.18);
+      --shadow-inset: inset 0 0 0 1px rgba(15, 18, 40, 0.06);
+    }
 
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.18), transparent 50%),
-                        radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.14), transparent 55%),
-                        radial-gradient(circle at 50% 80%, rgba(0, 0, 0, 0.2), transparent 50%);
-            z-index: 0;
-            pointer-events: none;
-        }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        #container {
-            display: flex;
-            height: 100vh;
-            gap: 24px;
-            padding: 24px;
-            box-sizing: border-box;
-        }
+    body {
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
 
-        #canvas-container {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            border-radius: 24px;
-            box-shadow: 0 24px 48px rgba(10, 10, 40, 0.35);
-            background: rgba(18, 24, 48, 0.6);
-            backdrop-filter: blur(6px);
-        }
+    .app-shell {
+      width: min(1280px, 100%);
+      padding: clamp(18px, 2vw, 32px);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
-        #canvas-container::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 24px;
-            pointer-events: none;
-        }
+    .app-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 28px;
+      border-radius: var(--panel-radius);
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(16px);
+    }
 
-        #cube-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            background-color: #1a1a2e;
-        }
+    .app-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
 
-        #controls {
-            width: 320px;
-            max-width: 360px;
-            background: rgba(12, 14, 32, 0.65);
-            padding: 24px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 22px;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(5, 5, 20, 0.35);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            position: relative;
-            z-index: 1;
-        }
+    .app-title h1 {
+      font-weight: 700;
+      font-size: clamp(22px, 3vw, 28px);
+      letter-spacing: 0.04em;
+    }
 
-        h1 {
-            margin-bottom: 8px;
-            text-align: center;
-            font-size: 26px;
-            letter-spacing: 0.04em;
-            text-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
-        }
+    .app-title p {
+      font-size: clamp(12px, 1.6vw, 14px);
+      color: var(--text-secondary);
+    }
 
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 16px;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
-        }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
 
-        .button-group h2 {
-            font-size: 18px;
-            margin-bottom: 2px;
-            color: #fff;
-            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
-        }
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      cursor: pointer;
+      transition: transform var(--transition), background var(--transition), border var(--transition);
+    }
 
-        .button-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-            gap: 10px;
-        }
+    .icon-button:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-strong);
+    }
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+    .icon-button:active {
+      transform: translateY(0);
+    }
 
-        button.secondary {
-            background: rgba(255, 255, 255, 0.15);
-        }
+    .app-main {
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) minmax(320px, 360px);
+      gap: 24px;
+      align-items: stretch;
+    }
 
-        button.highlight {
-            background: linear-gradient(135deg, rgba(255, 240, 200, 0.35), rgba(255, 120, 120, 0.45));
-            border-color: rgba(255, 200, 180, 0.6);
-            font-weight: bold;
-            letter-spacing: 0.02em;
-        }
+    .stage {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: relative;
+    }
 
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
+    .canvas-wrap {
+      position: relative;
+      flex: 1;
+      min-height: clamp(420px, 55vh, 640px);
+      border-radius: var(--panel-radius);
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      isolation: isolate;
+    }
 
-        button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
+    .canvas-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 1px solid var(--border-subtle);
+      pointer-events: none;
+    }
 
-        button:active {
-            transform: translateY(0);
-        }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      border-radius: inherit;
+    }
 
-        #status {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            font-size: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
-        }
+    #cube-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
-        .solved {
-            color: #4ade80;
-            font-weight: bold;
-        }
+    .stage-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--panel-radius);
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-inset);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
 
-        .instructions {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
-            font-size: 12px;
-            line-height: 1.6;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
-        }
+    .queue-chip {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(139, 157, 255, 0.18);
+      border: 1px solid rgba(139, 157, 255, 0.32);
+      color: var(--accent-strong);
+      font-weight: 600;
+      font-size: 12px;
+    }
 
-        .keyboard-hint {
-            margin-top: 10px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.7);
-        }
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
 
-        label {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.8);
-        }
+    .control-card {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 22px clamp(18px, 3vw, 24px);
+      border-radius: var(--panel-radius);
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(14px);
+    }
 
-        input[type="range"] {
-            width: 100%;
-            accent-color: #9f7aea;
-        }
+    .control-card header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
 
-        .history-list {
-            min-height: 48px;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.25);
-            border-radius: 12px;
-            font-family: "Fira Code", "Consolas", monospace;
-            font-size: 12px;
-            line-height: 1.6;
-            word-break: break-all;
-            color: rgba(255, 255, 255, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-        }
+    .control-card header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
 
-        .controls-column {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
+    .control-card header span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
 
-        .hint {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.65);
-        }
+    .range-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
 
-        @media (max-width: 1100px) {
-            #container {
-                flex-direction: column;
-                height: auto;
-                padding: 20px;
-            }
+    .range-field label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-            #controls {
-                width: 100%;
-                max-width: none;
-                order: -1;
-            }
+    .range-field strong {
+      font-variant-numeric: tabular-nums;
+    }
 
-            body {
-                overflow: auto;
-            }
-        }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
 
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 22px;
-            }
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      gap: 10px;
+    }
 
-            .button-group h2 {
-                font-size: 16px;
-            }
+    button {
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-tertiary);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform var(--transition), background var(--transition), border var(--transition);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
 
-            .instructions {
-                font-size: 11px;
-            }
-        }
-    </style>
+    button:hover {
+      transform: translateY(-2px);
+      background: rgba(139, 157, 255, 0.18);
+      border-color: rgba(139, 157, 255, 0.36);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: var(--surface-tertiary);
+    }
+
+    button.highlight {
+      background: var(--danger);
+      border-color: rgba(255, 120, 120, 0.45);
+      color: #ffecec;
+    }
+
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 18px;
+      border-radius: var(--panel-radius);
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-inset);
+      font-size: 14px;
+    }
+
+    .status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #status-text {
+      font-weight: 600;
+    }
+
+    .solved {
+      color: #52e0a1;
+    }
+
+    .status-meta {
+      display: grid;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .history-list {
+      min-height: 72px;
+      padding: 14px;
+      border-radius: 14px;
+      font-family: "Fira Code", "Consolas", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      letter-spacing: 0.4px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      box-shadow: var(--shadow-inset);
+    }
+
+    .instructions {
+      display: grid;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .instructions strong {
+      font-size: 14px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 1080px) {
+      .app-main {
+        grid-template-columns: 1fr;
+      }
+
+      .control-panel {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-shell {
+        padding: 16px;
+      }
+
+      .app-header {
+        padding: 18px;
+      }
+
+      .canvas-wrap {
+        min-height: 360px;
+      }
+    }
+  </style>
 </head>
-<body>
-    <div id="container">
-        <div id="canvas-container">
-            <canvas id="cube-canvas"></canvas>
+<body data-theme="dark">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Rubik's Cube Lab</h1>
+        <p>WebAssembly × Three.js で楽しむインタラクティブな 3D キューブ</p>
+      </div>
+      <div class="header-actions">
+        <div class="status-chip queue-chip" id="queue-indicator">待機中の操作: 0</div>
+        <button id="theme-toggle" class="icon-button" aria-label="テーマの切り替え">🌙</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="stage">
+        <div class="canvas-wrap">
+          <div id="canvas-container">
+            <canvas id="cube-canvas" tabindex="0" aria-label="ルービックキューブ 3D ビュー"></canvas>
+          </div>
         </div>
-        <div id="controls" class="controls-column">
-            <h1>🎲 ルービックキューブ</h1>
-
-            <div class="button-group">
-                <h2>スクランブルと操作</h2>
-                <label for="scramble-length">
-                    スクランブル手数: <strong id="scramble-length-value">20</strong>
-                </label>
-                <input type="range" id="scramble-length" min="5" max="40" value="20">
-                <label for="animation-speed">
-                    アニメーション速度: <strong id="animation-speed-value">1.0x</strong>
-                </label>
-                <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0">
-                <div class="button-grid">
-                    <button id="scramble">🎲 ランダムスクランブル</button>
-                    <button id="undo" class="secondary">↩️ 一手戻す</button>
-                    <button id="reset-view" class="secondary">📷 ビューをリセット</button>
-                </div>
-            </div>
-            
-            <div class="button-group">
-                <h2>前面 (Front)</h2>
-                <div class="button-grid">
-                    <button id="F">F (前面時計回り)</button>
-                    <button id="F'">F' (前面反時計回り)</button>
-                    <button id="F2">F2 (前面180度)</button>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <h2>右面 (Right)</h2>
-                <div class="button-grid">
-                    <button id="R">R (右面時計回り)</button>
-                    <button id="R'">R' (右面反時計回り)</button>
-                    <button id="R2">R2 (右面180度)</button>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <h2>上面 (Up)</h2>
-                <div class="button-grid">
-                    <button id="U">U (上面時計回り)</button>
-                    <button id="U'">U' (上面反時計回り)</button>
-                    <button id="U2">U2 (上面180度)</button>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <h2>左面 (Left)</h2>
-                <div class="button-grid">
-                    <button id="L">L (左面時計回り)</button>
-                    <button id="L'">L' (左面反時計回り)</button>
-                    <button id="L2">L2 (左面180度)</button>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <h2>背面 (Back)</h2>
-                <div class="button-grid">
-                    <button id="B">B (背面時計回り)</button>
-                    <button id="B'">B' (背面反時計回り)</button>
-                    <button id="B2">B2 (背面180度)</button>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <h2>底面 (Down)</h2>
-                <div class="button-grid">
-                    <button id="D">D (底面時計回り)</button>
-                    <button id="D'">D' (底面反時計回り)</button>
-                    <button id="D2">D2 (底面180度)</button>
-                </div>
-            </div>
-
-            <div class="button-group">
-                <div class="button-grid">
-                    <button id="reset" class="highlight">🔄 リセット</button>
-                </div>
-            </div>
-
-            <div id="status">
-                <div id="status-text">状態: 解かれています</div>
-                <div id="move-counter">手数: 0</div>
-                <div id="last-move" class="hint">直近の操作: なし</div>
-                <div id="queue-indicator" class="hint">待機中の操作: 0</div>
-            </div>
-
-            <div class="button-group">
-                <h2>操作履歴</h2>
-                <div id="history-list" class="history-list">まだ動きがありません</div>
-            </div>
-
-            <div class="instructions">
-                <strong>操作説明:</strong><br>
-                • 左ドラッグでカメラを回転（慣性付き）<br>
-                • ホイールでズーム<br>
-                • キーボードショートカットも利用可能<br>
-                • ボタンまたはキーでキューブの面を回転
-                
-                <div class="keyboard-hint">
-                    <strong>キーボード:</strong><br>
-                    F/R/U/B/L/D + Shift (反時計回り) + Alt (180度)
-                </div>
-                <div class="keyboard-hint">
-                    スクランブルや一手戻し、速度調整で練習を効率化できます。
-                </div>
-            </div>
+        <div class="stage-footer">
+          <span class="hint">クリックで面を操作 / Shift で反時計回り / Alt で180° 回転</span>
+          <span class="hint">慣性付きドラッグで視点を移動できます</span>
         </div>
-    </div>
+      </section>
 
-    <script type="module" src="/src/main.js"></script>
+      <aside class="control-panel">
+        <section class="control-card">
+          <header>
+            <h2>操作パネル</h2>
+            <span>スクランブルやビュー操作をすばやく実行</span>
+          </header>
+          <div class="range-field">
+            <label for="scramble-length">
+              スクランブル手数
+              <strong id="scramble-length-value">20</strong>
+            </label>
+            <input type="range" id="scramble-length" min="5" max="40" value="20" />
+          </div>
+          <div class="range-field">
+            <label for="animation-speed">
+              アニメーション速度
+              <strong id="animation-speed-value">1.0x</strong>
+            </label>
+            <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0" />
+          </div>
+          <div class="button-grid">
+            <button id="scramble">🎲 スクランブル</button>
+            <button id="undo" class="secondary">↩️ 一手戻す</button>
+            <button id="reset-view" class="secondary">📷 ビューリセット</button>
+            <button id="reset" class="highlight">🔄 リセット</button>
+          </div>
+        </section>
+
+        <section class="control-card">
+          <header>
+            <h2>面操作</h2>
+            <span>ボタンまたはキーボードで面を回転</span>
+          </header>
+          <div class="button-grid">
+            <button id="F">F</button>
+            <button id="F'">F'</button>
+            <button id="F2">F2</button>
+            <button id="R">R</button>
+            <button id="R'">R'</button>
+            <button id="R2">R2</button>
+            <button id="U">U</button>
+            <button id="U'">U'</button>
+            <button id="U2">U2</button>
+            <button id="L">L</button>
+            <button id="L'">L'</button>
+            <button id="L2">L2</button>
+            <button id="B">B</button>
+            <button id="B'">B'</button>
+            <button id="B2">B2</button>
+            <button id="D">D</button>
+            <button id="D'">D'</button>
+            <button id="D2">D2</button>
+          </div>
+        </section>
+
+        <section class="status-card" id="status">
+          <div class="status-header">
+            <span id="status-text">状態: 解かれています</span>
+          </div>
+          <div class="status-meta">
+            <span id="move-counter">手数: 0</span>
+            <span id="last-move">直近の操作: なし</span>
+          </div>
+          <div>
+            <strong>操作履歴</strong>
+          </div>
+          <div id="history-list" class="history-list">まだ動きがありません</div>
+        </section>
+
+        <section class="control-card">
+          <header>
+            <h2>ヒント</h2>
+            <span>キーボードとマウスで直感的に操作</span>
+          </header>
+          <div class="instructions">
+            <div>
+              <strong>マウス・タッチ操作</strong><br />
+              • 左ドラッグ: 慣性付きで視点を回転<br />
+              • ホイール: ズームイン / アウト<br />
+              • キューブをクリック: その面を回転 (Shiftで反時計回り / Altで180度)
+            </div>
+            <div>
+              <strong>キーボード</strong><br />
+              F / R / U / B / L / D で各面を時計回り<br />
+              Shift + キーで反時計回り / Alt + キーで180度
+            </div>
+            <div class="hint">
+              スクランブルと一手戻しを組み合わせて、練習ルーチンを効率化しましょう。
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

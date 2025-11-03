@@ -45,16 +45,17 @@ const INVERSE_MOVE_MAP = {
 };
 
 const FACE_ROTATION_CONFIG = {
-  F: { axis: "z", level: 2, clockwiseAngle: -Math.PI / 2 },
-  B: { axis: "z", level: 0, clockwiseAngle: Math.PI / 2 },
-  R: { axis: "x", level: 2, clockwiseAngle: Math.PI / 2 },
-  L: { axis: "x", level: 0, clockwiseAngle: -Math.PI / 2 },
-  U: { axis: "y", level: 2, clockwiseAngle: -Math.PI / 2 },
-  D: { axis: "y", level: 0, clockwiseAngle: Math.PI / 2 },
+  F: { axis: "z", level: 2, direction: 1 },
+  B: { axis: "z", level: 0, direction: -1 },
+  R: { axis: "x", level: 2, direction: 1 },
+  L: { axis: "x", level: 0, direction: -1 },
+  U: { axis: "y", level: 2, direction: 1 },
+  D: { axis: "y", level: 0, direction: -1 },
 };
 
 const SCRAMBLE_MOVES = Object.keys(MOVE_KEY_TO_ENUM);
 const HISTORY_CHUNK_SIZE = 12;
+const THEME_STORAGE_KEY = "rubiks-cube-theme";
 
 const BASE_CUBIE_SIZE = 0.56;
 const STICKER_INSET = 0.08;
@@ -68,7 +69,12 @@ const BASE_CUBIE_GEOMETRY = new THREE.BoxGeometry(
   BASE_CUBIE_SIZE,
   BASE_CUBIE_SIZE
 );
-const STICKER_GEOMETRY = new THREE.PlaneGeometry(STICKER_SIZE, STICKER_SIZE, 1, 1);
+const STICKER_GEOMETRY = new THREE.PlaneGeometry(
+  STICKER_SIZE,
+  STICKER_SIZE,
+  1,
+  1
+);
 const EDGE_GEOMETRY = new THREE.EdgesGeometry(
   new THREE.BoxGeometry(
     BASE_CUBIE_SIZE + 0.02,
@@ -111,7 +117,7 @@ const ANIMATION_SETTINGS = {
   baseDuration: 320,
   speed: 1,
   easing(t) {
-    return 1 - Math.pow(1 - t, 3); // easeOutCubic
+    return 1 - Math.pow(1 - t, 3);
   },
 };
 
@@ -121,12 +127,17 @@ let camera;
 let renderer;
 let cubeGroup;
 let orbitControls;
-let isAnimating = false;
+let raycaster;
+let pointer;
 
-const moveQueue = [];
+let isAnimating = false;
 let moveHistory = [];
+let moveQueue = [];
 let scrambleSequence = [];
 let lastActionLabel = "なし";
+
+let pointerDownInfo = null;
+let pointerMoved = false;
 
 async function initApp() {
   try {
@@ -135,6 +146,7 @@ async function initApp() {
     initThreeJS();
     createCube();
     setupControls();
+    setupTheme();
     animate();
     updateStatus();
   } catch (error) {
@@ -174,7 +186,7 @@ function initThreeJS() {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
   }
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMappingExposure = 1.06;
   renderer.physicallyCorrectLights = true;
 
   orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -221,6 +233,14 @@ function initThreeJS() {
   floor.position.y = -1.45;
   scene.add(floor);
 
+  raycaster = new THREE.Raycaster();
+  pointer = new THREE.Vector2();
+
+  renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+  renderer.domElement.addEventListener("pointermove", handlePointerMove);
+  renderer.domElement.addEventListener("pointerup", handlePointerUp);
+  renderer.domElement.addEventListener("pointerleave", handlePointerUp);
+
   window.addEventListener("resize", onWindowResize);
 }
 
@@ -245,7 +265,11 @@ function createCube() {
     for (let y = 0; y < 3; y++) {
       for (let z = 0; z < 3; z++) {
         const cubie = createCubie(x, y, z, state);
-        cubie.position.set((x - 1) * STRIDE, (y - 1) * STRIDE, (z - 1) * STRIDE);
+        cubie.position.set(
+          (x - 1) * STRIDE,
+          (y - 1) * STRIDE,
+          (z - 1) * STRIDE
+        );
         cubie.userData.gridPosition = { x, y, z };
         cubeGroup.add(cubie);
       }
@@ -390,12 +414,12 @@ function setupControls() {
   Object.keys(MOVE_KEY_TO_ENUM).forEach((id) => {
     const button = document.getElementById(id);
     button?.addEventListener("click", () => {
-      enqueueMove(id, { record: true, source: "user" });
+      enqueueMove(id, { record: true, source: "button" });
     });
   });
 
   document.addEventListener("keydown", (event) => {
-    if (isAnimating) return;
+    if (isAnimating || moveQueue.length > 0) return;
 
     const key = event.key.toLowerCase();
     const baseMoves = {
@@ -412,15 +436,40 @@ function setupControls() {
       return;
     }
 
-    let moveKey = base;
-    if (event.altKey) {
-      moveKey = `${base}2`;
-    } else if (event.shiftKey) {
-      moveKey = `${base}'`;
-    }
-
+    const moveKey = buildMoveKeyFromModifiers(base, event);
     enqueueMove(moveKey, { record: true, source: "keyboard" });
   });
+}
+
+function setupTheme() {
+  const themeToggle = document.getElementById("theme-toggle");
+  if (!themeToggle) {
+    return;
+  }
+
+  const prefersLight = window.matchMedia?.("(prefers-color-scheme: light)")?.matches;
+  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const initialTheme = storedTheme || (prefersLight ? "light" : "dark");
+  applyTheme(initialTheme);
+
+  themeToggle.addEventListener("click", () => {
+    const current = document.body.dataset.theme === "light" ? "light" : "dark";
+    const next = current === "light" ? "dark" : "light";
+    applyTheme(next);
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+  });
+}
+
+function applyTheme(theme) {
+  document.body.dataset.theme = theme === "light" ? "light" : "dark";
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.textContent = theme === "light" ? "☀️" : "🌙";
+    themeToggle.setAttribute(
+      "aria-label",
+      theme === "light" ? "ダークテーマに切り替え" : "ライトテーマに切り替え"
+    );
+  }
 }
 
 function enqueueMove(moveKey, options = {}) {
@@ -429,15 +478,13 @@ function enqueueMove(moveKey, options = {}) {
     return;
   }
 
-  moveQueue.push({
-    moveKey,
-    options: {
-      record: options.record ?? true,
-      source: options.source ?? "user",
-      undoneMove: options.undoneMove,
-    },
-  });
+  if (isAnimating) {
+    moveQueue.push({ moveKey, options });
+    updateStatus();
+    return;
+  }
 
+  moveQueue.push({ moveKey, options });
   updateStatus();
   processMoveQueue();
 }
@@ -483,7 +530,7 @@ function animateMove(moveKey, options) {
     rotationGroup.attach(cubie);
   });
 
-  const targetAngle = computeTargetAngle(moveKey, faceConfig.clockwiseAngle);
+  const targetAngle = computeTargetAngle(moveKey, faceConfig.direction);
   const duration = getAnimationDuration(moveKey);
   const startTime = performance.now();
 
@@ -508,16 +555,18 @@ function animateMove(moveKey, options) {
   requestAnimationFrame(step);
 }
 
-function computeTargetAngle(moveKey, clockwiseAngle) {
+function computeTargetAngle(moveKey, direction) {
+  const baseAngle = -direction * (Math.PI / 2);
+
   if (moveKey.endsWith("2")) {
-    return clockwiseAngle * 2;
+    return baseAngle * 2;
   }
 
   if (moveKey.includes("'")) {
-    return -clockwiseAngle;
+    return -baseAngle;
   }
 
-  return clockwiseAngle;
+  return baseAngle;
 }
 
 function getAnimationDuration(moveKey) {
@@ -532,14 +581,39 @@ function finalizeMove(rotationGroup, rotatedCubies, moveKey, options) {
   });
   cubeGroup.remove(rotationGroup);
 
+  snapCubiesToGrid(rotatedCubies);
+
   const moveEnum = MOVE_KEY_TO_ENUM[moveKey];
   cube.apply_move(moveEnum);
-  createCube();
 
   handleMoveCompletion(moveKey, options);
 
   isAnimating = false;
+  updateStatus();
   processMoveQueue();
+}
+
+function snapCubiesToGrid(cubies) {
+  cubies.forEach((cubie) => {
+    const pos = cubie.position;
+
+    const gridX = clampIndex(Math.round(pos.x / STRIDE) + 1);
+    const gridY = clampIndex(Math.round(pos.y / STRIDE) + 1);
+    const gridZ = clampIndex(Math.round(pos.z / STRIDE) + 1);
+
+    cubie.position.set(
+      (gridX - 1) * STRIDE,
+      (gridY - 1) * STRIDE,
+      (gridZ - 1) * STRIDE
+    );
+
+    cubie.userData.gridPosition = { x: gridX, y: gridY, z: gridZ };
+    cubie.quaternion.normalize();
+  });
+}
+
+function clampIndex(value) {
+  return Math.min(2, Math.max(0, value));
 }
 
 function handleMoveCompletion(moveKey, options) {
@@ -556,15 +630,9 @@ function handleMoveCompletion(moveKey, options) {
   } else {
     lastActionLabel = moveKey;
   }
-
-  updateStatus();
 }
 
 function scrambleCube() {
-  if (!cube) {
-    return;
-  }
-
   const scrambleLengthInput = document.getElementById("scramble-length");
   const scrambleCount = scrambleLengthInput
     ? parseInt(scrambleLengthInput.value, 10) || 20
@@ -612,10 +680,6 @@ function undoLastMove() {
 }
 
 function resetCube() {
-  if (!cube) {
-    return;
-  }
-
   moveQueue.length = 0;
   cube.reset();
   moveHistory = [];
@@ -627,10 +691,6 @@ function resetCube() {
 }
 
 function resetView() {
-  if (!camera || !orbitControls) {
-    return;
-  }
-
   camera.position.copy(INITIAL_CAMERA_POSITION);
   orbitControls.target.set(0, 0, 0);
   orbitControls.update();
@@ -689,9 +749,8 @@ function updateStatus() {
       ...formatMoveLines("手順", moveHistory),
     ];
 
-    historyList.textContent = lines.length === 0
-      ? "まだ動きがありません"
-      : lines.join("\n");
+    historyList.textContent =
+      lines.length === 0 ? "まだ動きがありません" : lines.join("\n");
   }
 }
 
@@ -724,6 +783,116 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
   renderScene();
+}
+
+function handlePointerDown(event) {
+  if (isAnimating || moveQueue.length > 0) {
+    pointerDownInfo = null;
+    return;
+  }
+
+  setPointerFromEvent(event);
+  const intersection = intersectCube();
+  if (!intersection) {
+    pointerDownInfo = null;
+    return;
+  }
+
+  const baseMove = determineMoveFromIntersection(intersection);
+  if (!baseMove) {
+    pointerDownInfo = null;
+    return;
+  }
+
+  pointerDownInfo = {
+    baseMove,
+    startX: event.clientX,
+    startY: event.clientY,
+    pointerEvent: event,
+  };
+  pointerMoved = false;
+}
+
+function handlePointerMove(event) {
+  if (!pointerDownInfo) {
+    return;
+  }
+
+  const dx = event.clientX - pointerDownInfo.startX;
+  const dy = event.clientY - pointerDownInfo.startY;
+  if (Math.hypot(dx, dy) > 6) {
+    pointerMoved = true;
+  }
+}
+
+function handlePointerUp(event) {
+  if (!pointerDownInfo) {
+    return;
+  }
+
+  if (!pointerMoved) {
+    const moveKey = buildMoveKeyFromModifiers(pointerDownInfo.baseMove, event);
+    enqueueMove(moveKey, { record: true, source: "pointer" });
+  }
+
+  pointerDownInfo = null;
+  pointerMoved = false;
+}
+
+function setPointerFromEvent(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function intersectCube() {
+  if (!cubeGroup || !raycaster || !camera) {
+    return null;
+  }
+
+  raycaster.setFromCamera(pointer, camera);
+  const intersections = raycaster.intersectObjects(cubeGroup.children, true);
+  return intersections[0] || null;
+}
+
+function determineMoveFromIntersection(intersection) {
+  if (!intersection) {
+    return null;
+  }
+
+  const ma = new THREE.Matrix3().getNormalMatrix(intersection.object.matrixWorld);
+  const worldNormal = intersection.face.normal
+    .clone()
+    .applyMatrix3(ma)
+    .normalize();
+
+  const absX = Math.abs(worldNormal.x);
+  const absY = Math.abs(worldNormal.y);
+  const absZ = Math.abs(worldNormal.z);
+
+  if (absX > absY && absX > absZ) {
+    return worldNormal.x > 0 ? "R" : "L";
+  }
+
+  if (absY > absX && absY > absZ) {
+    return worldNormal.y > 0 ? "U" : "D";
+  }
+
+  if (absZ > absX && absZ > absY) {
+    return worldNormal.z > 0 ? "F" : "B";
+  }
+
+  return null;
+}
+
+function buildMoveKeyFromModifiers(baseMove, event) {
+  if (event.altKey) {
+    return `${baseMove}2`;
+  }
+  if (event.shiftKey) {
+    return `${baseMove}'`;
+  }
+  return baseMove;
 }
 
 initApp().catch(console.error);
