@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ルービックキューブ 3D</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-gradient: radial-gradient(circle at 24% 14%, rgba(120, 146, 255, 0.2), transparent 55%),
+        radial-gradient(circle at 86% 6%, rgba(255, 120, 210, 0.16), transparent 60%),
+        linear-gradient(140deg, #070a16 0%, #131733 45%, #04050f 100%);
+      --surface-primary: rgba(22, 26, 48, 0.76);
+      --surface-secondary: rgba(28, 32, 56, 0.58);
+      --surface-tertiary: rgba(16, 20, 38, 0.52);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #f5f7ff;
+      --text-secondary: rgba(245, 247, 255, 0.76);
+      --text-muted: rgba(245, 247, 255, 0.58);
+      --accent: #8b9dff;
+      --accent-strong: #6c79ff;
+      --danger: rgba(255, 120, 120, 0.48);
+      --solved-color: #52e0a1;
+      --panel-radius: 20px;
+      --transition: 160ms ease;
+      font-family: "Inter", "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    }
+
+    body[data-theme="light"] {
+      color-scheme: light;
+      --bg-gradient: radial-gradient(circle at 22% 12%, rgba(180, 200, 255, 0.38), transparent 55%),
+        radial-gradient(circle at 78% 0%, rgba(255, 200, 230, 0.26), transparent 60%),
+        linear-gradient(140deg, #e8ecff 0%, #ffffff 45%, #f2f4ff 100%);
+      --surface-primary: rgba(255, 255, 255, 0.9);
+      --surface-secondary: rgba(244, 246, 255, 0.82);
+      --surface-tertiary: rgba(232, 236, 255, 0.7);
+      --border-subtle: rgba(20, 22, 44, 0.1);
+      --text-primary: #17203c;
+      --text-secondary: rgba(30, 34, 62, 0.8);
+      --text-muted: rgba(30, 34, 62, 0.6);
+      --accent: #5664ff;
+      --accent-strong: #3a4cff;
+      --danger: rgba(255, 120, 140, 0.36);
+      --solved-color: #1c7a4d;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #background-particles {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .app-shell {
+      width: min(1160px, 100%);
+      height: 100vh;
+      padding: clamp(10px, 1.5vw, 18px);
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr);
+      gap: clamp(10px, 1.4vw, 18px);
+      position: relative;
+      z-index: 1;
+    }
+
+    .stage,
+    .control-panel {
+      min-height: 0;
+    }
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      flex: 1;
+      border-radius: var(--panel-radius);
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      isolation: isolate;
+      min-height: 0;
+    }
+
+    .reset-view-button {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(15, 20, 36, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform var(--transition), background var(--transition);
+      backdrop-filter: blur(8px);
+    }
+
+    .reset-view-button:hover {
+      transform: translateY(-2px);
+      background: rgba(139, 157, 255, 0.28);
+    }
+
+    .reset-view-button:active {
+      transform: translateY(0);
+    }
+
+    .canvas-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 1px solid var(--border-subtle);
+      pointer-events: none;
+    }
+
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      overflow: hidden;
+    }
+
+    #cube-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .stage-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--panel-radius);
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .control-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px clamp(12px, 2vw, 20px);
+      border-radius: var(--panel-radius);
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      width: 100%;
+    }
+
+    .control-card header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .control-card header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .control-card header span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .theme-controls {
+      display: inline-flex;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .theme-control {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .theme-control.active {
+      background: rgba(139, 157, 255, 0.28);
+      color: var(--accent-strong);
+      font-weight: 600;
+    }
+
+    .range-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .range-field label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .range-field strong {
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    button {
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-tertiary);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform var(--transition), background var(--transition), border var(--transition);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: rgba(139, 157, 255, 0.22);
+      border-color: rgba(139, 157, 255, 0.38);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: var(--surface-tertiary);
+    }
+
+    button.highlight {
+      background: var(--danger);
+      border-color: rgba(255, 120, 120, 0.45);
+      color: #ffecec;
+    }
+
+    button.accent {
+      background: rgba(139, 157, 255, 0.28);
+      border-color: rgba(139, 157, 255, 0.45);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px;
+      border-radius: var(--panel-radius);
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #status-text {
+      font-weight: 600;
+    }
+
+    .solved {
+      color: var(--solved-color);
+    }
+
+    .status-meta {
+      display: grid;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-extras {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-tertiary);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .history-list {
+      min-height: 72px;
+      max-height: 110px;
+      padding: 12px;
+      border-radius: 14px;
+      font-family: "Fira Code", "Consolas", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      letter-spacing: 0.4px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      overflow: auto;
+    }
+
+    .instructions {
+      display: grid;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .instructions strong {
+      font-size: 14px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 1080px) {
+      .app-shell {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(320px, 0.75fr) minmax(0, 1fr);
+        height: auto;
+        min-height: 100vh;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-shell {
+        padding: 10px;
+        grid-template-rows: minmax(280px, 0.7fr) minmax(0, 1fr);
+      }
+
+      .control-card header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .stage-footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-BnNAAvP3.js"></script>
+</head>
+<body data-theme="dark">
+  <canvas id="background-particles"></canvas>
+  <div class="app-shell">
+    <section class="stage">
+      <div class="canvas-wrap">
+        <div id="canvas-container">
+          <canvas
+            id="cube-canvas"
+            tabindex="0"
+            aria-label="ルービックキューブ 3D ビュー"></canvas>
+        </div>
+        <button id="reset-view" class="reset-view-button" aria-label="ビューをリセット">
+          📷 ビューリセット
+        </button>
+      </div>
+      <!--
+      <div class="stage-footer">
+        <span class="hint">クリックで面を操作 (Shift:逆回転 / Alt:180°)</span>
+        <span class="hint">慣性付きドラッグで視点を移動できます</span>
+      </div>
+      -->
+    </section>
+
+    <aside class="control-panel">
+      <section class="control-card">
+        <header>
+          <h2>操作パネル</h2>
+          <span>スクランブル・ビュー・テーマを一括操作</span>
+        </header>
+        <div class="theme-controls" role="group" aria-label="テーマ設定">
+          <button type="button" class="theme-control" data-theme-mode="system" aria-pressed="false">
+            システム
+          </button>
+          <button type="button" class="theme-control" data-theme-mode="light" aria-pressed="false">
+            ライト
+          </button>
+          <button type="button" class="theme-control" data-theme-mode="dark" aria-pressed="true">
+            ダーク
+          </button>
+        </div>
+        <div class="range-field">
+          <label for="scramble-length">
+            スクランブル手数
+            <strong id="scramble-length-value">20</strong>
+          </label>
+          <input type="range" id="scramble-length" min="5" max="40" value="20" />
+        </div>
+        <div class="range-field">
+          <label for="animation-speed">
+            アニメーション速度
+            <strong id="animation-speed-value">1.0x</strong>
+          </label>
+          <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0" />
+        </div>
+        <div class="button-grid">
+          <button id="scramble">🎲 スクランブル</button>
+          <button id="undo" class="secondary">↩️ 一手戻す</button>
+          <button id="auto-solve" class="accent">🤖 オートソルブ</button>
+        </div>
+      </section>
+
+      <section class="control-card">
+        <header>
+          <h2>面操作</h2>
+          <span>ボタンまたはキーボードで面を回転</span>
+        </header>
+        <div class="button-grid">
+          <button id="F">F</button>
+          <button id="F'">F'</button>
+          <button id="F2">F2</button>
+          <button id="R">R</button>
+          <button id="R'">R'</button>
+          <button id="R2">R2</button>
+          <button id="U">U</button>
+          <button id="U'">U'</button>
+          <button id="U2">U2</button>
+          <button id="L">L</button>
+          <button id="L'">L'</button>
+          <button id="L2">L2</button>
+          <button id="B">B</button>
+          <button id="B'">B'</button>
+          <button id="B2">B2</button>
+          <button id="D">D</button>
+          <button id="D'">D'</button>
+          <button id="D2">D2</button>
+        </div>
+      </section>
+
+      <section class="status-card" id="status">
+        <div class="status-header">
+          <span id="status-text">状態: 解かれています</span>
+          <div class="status-extras">
+            <span class="status-chip" id="timer-display">00:00.0</span>
+            <span class="status-chip" id="queue-indicator">待機中の操作: 0</span>
+          </div>
+        </div>
+        <div class="status-meta">
+          <span id="move-counter">手数: 0</span>
+          <span id="last-move">直近の操作: なし</span>
+        </div>
+        <div>
+          <strong>操作履歴</strong>
+        </div>
+        <div id="history-list" class="history-list">まだ動きがありません</div>
+      </section>
+
+      <section class="control-card">
+        <header>
+          <h2>ヒント</h2>
+          <span>キーボードとマウスで直感的に操作</span>
+        </header>
+        <div class="instructions">
+          <!--
+          <div>
+            <strong>マウス・タッチ操作</strong><br />
+            • 左ドラッグ: 慣性付きで視点を回転<br />
+            • ホイール: ズームイン / ズームアウト<br />
+            • キューブをクリック: その面を回転 (Shiftで反時計回り / Altで180度)
+          </div>
+          -->
+          <div>
+            <strong>キーボード</strong><br />
+            F / R / U / B / L / D で各面を時計回り<br />
+            Shift + キーで反時計回り / Alt + キーで180度
+          </div>
+          <div class="hint">
+            スクランブル後にタイマーがスタートし、解けた瞬間に自動停止します。オートソルブは現在の状態から最適解で復元し、ビューも自動でリセットされます。
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+</body>
+</html>
