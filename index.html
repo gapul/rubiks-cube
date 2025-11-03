@@ -7,41 +7,45 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg-gradient: radial-gradient(circle at 20% 20%, rgba(120, 146, 255, 0.18), transparent 55%), radial-gradient(circle at 80% 10%, rgba(255, 120, 210, 0.16), transparent 60%), linear-gradient(140deg, #0b1024 0%, #141835 38%, #04060f 100%);
+      --bg-gradient: radial-gradient(circle at 24% 14%, rgba(120, 146, 255, 0.2), transparent 55%),
+        radial-gradient(circle at 86% 6%, rgba(255, 120, 210, 0.16), transparent 60%),
+        linear-gradient(140deg, #0b1024 0%, #141835 40%, #050712 100%);
       --surface-primary: rgba(20, 24, 44, 0.78);
       --surface-secondary: rgba(30, 36, 62, 0.65);
-      --surface-tertiary: rgba(18, 22, 40, 0.55);
+      --surface-tertiary: rgba(18, 22, 40, 0.52);
       --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.16);
+      --border-strong: rgba(255, 255, 255, 0.18);
       --text-primary: #f5f7ff;
-      --text-secondary: rgba(245, 247, 255, 0.72);
-      --text-muted: rgba(245, 247, 255, 0.56);
+      --text-secondary: rgba(245, 247, 255, 0.74);
+      --text-muted: rgba(245, 247, 255, 0.58);
       --accent: #8b9dff;
       --accent-strong: #6c79ff;
       --danger: rgba(255, 120, 120, 0.48);
-      --shadow-soft: 0 26px 48px rgba(4, 6, 15, 0.55);
-      --shadow-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-      --panel-radius: 24px;
+      --shadow-soft: 0 22px 44px rgba(4, 6, 15, 0.55);
+      --shadow-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+      --panel-radius: 22px;
       --transition: 200ms ease;
       font-family: "Inter", "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
     }
 
     body[data-theme="light"] {
       color-scheme: light;
-      --bg-gradient: radial-gradient(circle at 15% 20%, rgba(180, 205, 255, 0.55), transparent 60%), radial-gradient(circle at 82% 0%, rgba(255, 180, 220, 0.4), transparent 60%), linear-gradient(140deg, #e6ecff 0%, #ffffff 40%, #f2f4ff 100%);
-      --surface-primary: rgba(255, 255, 255, 0.85);
+      --bg-gradient: radial-gradient(circle at 20% 15%, rgba(150, 175, 255, 0.45), transparent 55%),
+        radial-gradient(circle at 80% 0%, rgba(255, 180, 220, 0.32), transparent 60%),
+        linear-gradient(140deg, #e8ecff 0%, #ffffff 40%, #f2f4ff 100%);
+      --surface-primary: rgba(255, 255, 255, 0.9);
       --surface-secondary: rgba(244, 246, 255, 0.82);
-      --surface-tertiary: rgba(236, 240, 255, 0.6);
+      --surface-tertiary: rgba(236, 240, 255, 0.7);
       --border-subtle: rgba(15, 18, 40, 0.08);
-      --border-strong: rgba(15, 18, 40, 0.12);
+      --border-strong: rgba(15, 18, 40, 0.16);
       --text-primary: #161a33;
-      --text-secondary: rgba(30, 34, 62, 0.78);
-      --text-muted: rgba(30, 34, 62, 0.55);
-      --accent: #5a6bff;
-      --accent-strong: #394bff;
-      --danger: rgba(255, 108, 128, 0.38);
-      --shadow-soft: 0 26px 48px rgba(40, 56, 120, 0.18);
-      --shadow-inset: inset 0 0 0 1px rgba(15, 18, 40, 0.06);
+      --text-secondary: rgba(30, 34, 62, 0.82);
+      --text-muted: rgba(30, 34, 62, 0.58);
+      --accent: #5664ff;
+      --accent-strong: #3a4cff;
+      --danger: rgba(255, 108, 128, 0.32);
+      --shadow-soft: 0 20px 40px rgba(40, 56, 120, 0.2);
+      --shadow-inset: inset 0 0 0 1px rgba(15, 18, 40, 0.08);
     }
 
     * {
@@ -50,35 +54,41 @@
       box-sizing: border-box;
     }
 
+    html,
     body {
-      min-height: 100vh;
+      height: 100%;
+    }
+
+    body {
       background: var(--bg-gradient);
       color: var(--text-primary);
       display: flex;
       justify-content: center;
       align-items: stretch;
+      overflow: hidden;
     }
 
     .app-shell {
-      width: min(1280px, 100%);
-      padding: clamp(18px, 2vw, 32px);
+      width: min(1180px, 100%);
+      padding: clamp(12px, 1.8vw, 20px);
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
+      height: 100vh;
     }
 
     .app-header {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
       align-items: center;
-      gap: 16px;
-      padding: 20px 28px;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px clamp(16px, 2vw, 24px);
       border-radius: var(--panel-radius);
       background: var(--surface-primary);
       border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-soft);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(14px);
+      flex-shrink: 0;
     }
 
     .app-title {
@@ -89,24 +99,49 @@
 
     .app-title h1 {
       font-weight: 700;
-      font-size: clamp(22px, 3vw, 28px);
+      font-size: clamp(20px, 2.8vw, 26px);
       letter-spacing: 0.04em;
     }
 
     .app-title p {
-      font-size: clamp(12px, 1.6vw, 14px);
+      font-size: clamp(12px, 1.4vw, 14px);
       color: var(--text-secondary);
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .queue-chip {
+      background: rgba(139, 157, 255, 0.18);
+      border: 1px solid rgba(139, 157, 255, 0.32);
+      color: var(--accent-strong);
+    }
+
+    .timer-chip {
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      min-width: 88px;
+      text-align: center;
     }
 
     .icon-button {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       background: var(--surface-tertiary);
       border: 1px solid var(--border-subtle);
@@ -128,23 +163,25 @@
     }
 
     .app-main {
+      flex: 1;
       display: grid;
-      grid-template-columns: minmax(420px, 1fr) minmax(320px, 360px);
-      gap: 24px;
+      grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+      gap: 18px;
       align-items: stretch;
+      min-height: 0;
     }
 
     .stage {
       display: flex;
       flex-direction: column;
-      gap: 18px;
-      position: relative;
+      gap: 14px;
+      min-height: 0;
     }
 
     .canvas-wrap {
       position: relative;
       flex: 1;
-      min-height: clamp(420px, 55vh, 640px);
+      min-height: 0;
       border-radius: var(--panel-radius);
       background: var(--surface-primary);
       border: 1px solid var(--border-subtle);
@@ -165,8 +202,8 @@
     #canvas-container {
       position: absolute;
       inset: 0;
-      overflow: hidden;
       border-radius: inherit;
+      overflow: hidden;
     }
 
     #cube-canvas {
@@ -179,53 +216,56 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      padding: 14px 18px;
+      gap: 10px;
+      padding: 12px 16px;
       border-radius: var(--panel-radius);
       background: var(--surface-secondary);
       border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-inset);
       font-size: 12px;
       color: var(--text-muted);
-    }
-
-    .queue-chip {
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(139, 157, 255, 0.18);
-      border: 1px solid rgba(139, 157, 255, 0.32);
-      color: var(--accent-strong);
-      font-weight: 600;
-      font-size: 12px;
+      flex-shrink: 0;
     }
 
     .control-panel {
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 14px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .control-panel-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .control-card {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      padding: 22px clamp(18px, 3vw, 24px);
+      gap: 14px;
+      padding: 18px clamp(14px, 2.4vw, 22px);
       border-radius: var(--panel-radius);
       background: var(--surface-primary);
       border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-soft);
-      backdrop-filter: blur(14px);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
     }
 
     .control-card header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .control-card header h2 {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 600;
     }
 
@@ -259,8 +299,12 @@
 
     .button-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 10px;
+    }
+
+    .button-grid--compact {
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     }
 
     button {
@@ -281,8 +325,8 @@
 
     button:hover {
       transform: translateY(-2px);
-      background: rgba(139, 157, 255, 0.18);
-      border-color: rgba(139, 157, 255, 0.36);
+      background: rgba(139, 157, 255, 0.2);
+      border-color: rgba(139, 157, 255, 0.38);
     }
 
     button:active {
@@ -299,6 +343,13 @@
       color: #ffecec;
     }
 
+    button.accent {
+      background: rgba(139, 157, 255, 0.28);
+      border-color: rgba(139, 157, 255, 0.45);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
     button:disabled {
       opacity: 0.58;
       cursor: not-allowed;
@@ -309,7 +360,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding: 18px;
+      padding: 16px;
       border-radius: var(--panel-radius);
       background: var(--surface-secondary);
       border: 1px solid var(--border-subtle);
@@ -340,7 +391,8 @@
 
     .history-list {
       min-height: 72px;
-      padding: 14px;
+      max-height: 110px;
+      padding: 12px;
       border-radius: 14px;
       font-family: "Fira Code", "Consolas", monospace;
       font-size: 12px;
@@ -351,6 +403,7 @@
       color: var(--text-secondary);
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+      overflow: auto;
       box-shadow: var(--shadow-inset);
     }
 
@@ -373,7 +426,7 @@
 
     @media (max-width: 1080px) {
       .app-main {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .control-panel {
@@ -383,11 +436,12 @@
 
     @media (max-width: 640px) {
       .app-shell {
-        padding: 16px;
+        padding: 10px;
       }
 
       .app-header {
-        padding: 18px;
+        flex-direction: column;
+        align-items: flex-start;
       }
 
       .canvas-wrap {
@@ -404,8 +458,9 @@
         <p>WebAssembly × Three.js で楽しむインタラクティブな 3D キューブ</p>
       </div>
       <div class="header-actions">
-        <div class="status-chip queue-chip" id="queue-indicator">待機中の操作: 0</div>
-        <button id="theme-toggle" class="icon-button" aria-label="テーマの切り替え">🌙</button>
+        <div class="chip timer-chip" id="timer-display">00:00.0</div>
+        <div class="chip queue-chip" id="queue-indicator">待機中の操作: 0</div>
+        <button id="theme-toggle" class="icon-button" aria-label="テーマの切り替え">🌗</button>
       </div>
     </header>
 
@@ -413,106 +468,117 @@
       <section class="stage">
         <div class="canvas-wrap">
           <div id="canvas-container">
-            <canvas id="cube-canvas" tabindex="0" aria-label="ルービックキューブ 3D ビュー"></canvas>
+            <canvas
+              id="cube-canvas"
+              tabindex="0"
+              aria-label="ルービックキューブ 3D ビュー"></canvas>
           </div>
         </div>
         <div class="stage-footer">
-          <span class="hint">クリックで面を操作 / Shift で反時計回り / Alt で180° 回転</span>
+          <span class="hint">クリックで面を操作 (Shift:逆回転 / Alt:180°)</span>
           <span class="hint">慣性付きドラッグで視点を移動できます</span>
         </div>
       </section>
 
       <aside class="control-panel">
-        <section class="control-card">
-          <header>
-            <h2>操作パネル</h2>
-            <span>スクランブルやビュー操作をすばやく実行</span>
-          </header>
-          <div class="range-field">
-            <label for="scramble-length">
-              スクランブル手数
-              <strong id="scramble-length-value">20</strong>
-            </label>
-            <input type="range" id="scramble-length" min="5" max="40" value="20" />
-          </div>
-          <div class="range-field">
-            <label for="animation-speed">
-              アニメーション速度
-              <strong id="animation-speed-value">1.0x</strong>
-            </label>
-            <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0" />
-          </div>
-          <div class="button-grid">
-            <button id="scramble">🎲 スクランブル</button>
-            <button id="undo" class="secondary">↩️ 一手戻す</button>
-            <button id="reset-view" class="secondary">📷 ビューリセット</button>
-            <button id="reset" class="highlight">🔄 リセット</button>
-          </div>
-        </section>
+        <div class="control-panel-inner">
+          <section class="control-card">
+            <header>
+              <h2>操作パネル</h2>
+              <span>スクランブル・ビュー・タイマーを一括操作</span>
+            </header>
+            <div class="range-field">
+              <label for="scramble-length">
+                スクランブル手数
+                <strong id="scramble-length-value">20</strong>
+              </label>
+              <input type="range" id="scramble-length" min="5" max="40" value="20" />
+            </div>
+            <div class="range-field">
+              <label for="animation-speed">
+                アニメーション速度
+                <strong id="animation-speed-value">1.0x</strong>
+              </label>
+              <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0" />
+            </div>
+            <div class="button-grid">
+              <button id="scramble">🎲 スクランブル</button>
+              <button id="undo" class="secondary">↩️ 一手戻す</button>
+              <button id="auto-solve" class="accent">🤖 オートソルブ</button>
+              <button id="reset-view" class="secondary">📷 ビューリセット</button>
+              <button id="reset" class="highlight">🔄 リセット</button>
+            </div>
+            <div class="button-grid button-grid--compact">
+              <button id="start-timer" class="secondary">▶️ スタート</button>
+              <button id="stop-timer" class="secondary">⏸️ ストップ</button>
+              <button id="reset-timer" class="secondary">⟳ タイマーリセット</button>
+            </div>
+          </section>
 
-        <section class="control-card">
-          <header>
-            <h2>面操作</h2>
-            <span>ボタンまたはキーボードで面を回転</span>
-          </header>
-          <div class="button-grid">
-            <button id="F">F</button>
-            <button id="F'">F'</button>
-            <button id="F2">F2</button>
-            <button id="R">R</button>
-            <button id="R'">R'</button>
-            <button id="R2">R2</button>
-            <button id="U">U</button>
-            <button id="U'">U'</button>
-            <button id="U2">U2</button>
-            <button id="L">L</button>
-            <button id="L'">L'</button>
-            <button id="L2">L2</button>
-            <button id="B">B</button>
-            <button id="B'">B'</button>
-            <button id="B2">B2</button>
-            <button id="D">D</button>
-            <button id="D'">D'</button>
-            <button id="D2">D2</button>
-          </div>
-        </section>
+          <section class="control-card">
+            <header>
+              <h2>面操作</h2>
+              <span>ボタンまたはキーボードで面を回転</span>
+            </header>
+            <div class="button-grid">
+              <button id="F">F</button>
+              <button id="F'">F'</button>
+              <button id="F2">F2</button>
+              <button id="R">R</button>
+              <button id="R'">R'</button>
+              <button id="R2">R2</button>
+              <button id="U">U</button>
+              <button id="U'">U'</button>
+              <button id="U2">U2</button>
+              <button id="L">L</button>
+              <button id="L'">L'</button>
+              <button id="L2">L2</button>
+              <button id="B">B</button>
+              <button id="B'">B'</button>
+              <button id="B2">B2</button>
+              <button id="D">D</button>
+              <button id="D'">D'</button>
+              <button id="D2">D2</button>
+            </div>
+          </section>
 
-        <section class="status-card" id="status">
-          <div class="status-header">
-            <span id="status-text">状態: 解かれています</span>
-          </div>
-          <div class="status-meta">
-            <span id="move-counter">手数: 0</span>
-            <span id="last-move">直近の操作: なし</span>
-          </div>
-          <div>
-            <strong>操作履歴</strong>
-          </div>
-          <div id="history-list" class="history-list">まだ動きがありません</div>
-        </section>
-
-        <section class="control-card">
-          <header>
-            <h2>ヒント</h2>
-            <span>キーボードとマウスで直感的に操作</span>
-          </header>
-          <div class="instructions">
-            <div>
-              <strong>マウス・タッチ操作</strong><br />
-              • 左ドラッグ: 慣性付きで視点を回転<br />
-              • ホイール: ズームイン / アウト<br />
-              • キューブをクリック: その面を回転 (Shiftで反時計回り / Altで180度)
+          <section class="status-card" id="status">
+            <div class="status-header">
+              <span id="status-text">状態: 解かれています</span>
+            </div>
+            <div class="status-meta">
+              <span id="move-counter">手数: 0</span>
+              <span id="last-move">直近の操作: なし</span>
             </div>
             <div>
-              <strong>キーボード</strong><br />
-              F / R / U / B / L / D で各面を時計回り<br />
-              Shift + キーで反時計回り / Alt + キーで180度
+              <strong>操作履歴</strong>
             </div>
-            <div class="hint">
-              スクランブルと一手戻しを組み合わせて、練習ルーチンを効率化しましょう。
+            <div id="history-list" class="history-list">まだ動きがありません</div>
+          </section>
+
+          <section class="control-card">
+            <header>
+              <h2>ヒント</h2>
+              <span>キーボードとマウスで直感的に操作</span>
+            </header>
+            <div class="instructions">
+              <div>
+                <strong>マウス・タッチ操作</strong><br />
+                • 左ドラッグ: 慣性付きで視点を回転<br />
+                • ホイール: ズームイン / ズームアウト<br />
+                • キューブをクリック: その面を回転 (Shiftで反時計回り / Altで180度)
+              </div>
+              <div>
+                <strong>キーボード</strong><br />
+                F / R / U / B / L / D で各面を時計回り<br />
+                Shift + キーで反時計回り / Alt + キーで180度
+              </div>
+              <div class="hint">
+                スクランブル → タイマースタート → 練習 → オートソルブで、練習サイクルをスムーズに回せます。
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </aside>
     </main>
   </div>

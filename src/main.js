@@ -45,7 +45,7 @@ const INVERSE_MOVE_MAP = {
 };
 
 const FACE_ROTATION_CONFIG = {
-  F: { axis: "z", level: 2, direction: 1 },
+  F: { axis: "z", level: 2, direction: -1 },
   B: { axis: "z", level: 0, direction: -1 },
   R: { axis: "x", level: 2, direction: 1 },
   L: { axis: "x", level: 0, direction: -1 },
@@ -55,7 +55,13 @@ const FACE_ROTATION_CONFIG = {
 
 const SCRAMBLE_MOVES = Object.keys(MOVE_KEY_TO_ENUM);
 const HISTORY_CHUNK_SIZE = 12;
-const THEME_STORAGE_KEY = "rubiks-cube-theme";
+const THEME_MODE_STORAGE_KEY = "rubiks-cube-theme-mode";
+const THEME_MODES = ["system", "light", "dark"];
+const THEME_ICONS = {
+  system: "🌗",
+  light: "☀️",
+  dark: "🌙",
+};
 
 const BASE_CUBIE_SIZE = 0.56;
 const STICKER_INSET = 0.08;
@@ -135,9 +141,17 @@ let moveHistory = [];
 let moveQueue = [];
 let scrambleSequence = [];
 let lastActionLabel = "なし";
+let autoSolveInProgress = false;
 
 let pointerDownInfo = null;
 let pointerMoved = false;
+let systemThemeMatcher;
+let themeMode = "system";
+
+let timerInterval = null;
+let timerStart = 0;
+let elapsedMs = 0;
+let timerRunning = false;
 
 async function initApp() {
   try {
@@ -188,6 +202,7 @@ function initThreeJS() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.06;
   renderer.physicallyCorrectLights = true;
+  renderer.domElement.style.touchAction = "none";
 
   orbitControls = new OrbitControls(camera, renderer.domElement);
   orbitControls.enableDamping = true;
@@ -375,7 +390,9 @@ function setupControls() {
   const animationSpeedInput = document.getElementById("animation-speed");
   const animationSpeedValue = document.getElementById("animation-speed-value");
   if (animationSpeedInput && animationSpeedValue) {
-    animationSpeedValue.textContent = `${parseFloat(animationSpeedInput.value).toFixed(1)}x`;
+    animationSpeedValue.textContent = `${parseFloat(
+      animationSpeedInput.value
+    ).toFixed(1)}x`;
     animationSpeedInput.addEventListener("input", (event) => {
       const speed = parseFloat(event.target.value);
       ANIMATION_SETTINGS.speed = speed;
@@ -411,6 +428,27 @@ function setupControls() {
     }
   });
 
+  const autoSolveButton = document.getElementById("auto-solve");
+  autoSolveButton?.addEventListener("click", () => {
+    if (!isAnimating && moveQueue.length === 0) {
+      autoSolve();
+    }
+  });
+
+  document.getElementById("start-timer")?.addEventListener("click", () => {
+    if (!timerRunning) {
+      startTimer();
+    }
+  });
+
+  document.getElementById("stop-timer")?.addEventListener("click", () => {
+    stopTimer();
+  });
+
+  document.getElementById("reset-timer")?.addEventListener("click", () => {
+    resetTimer();
+  });
+
   Object.keys(MOVE_KEY_TO_ENUM).forEach((id) => {
     const button = document.getElementById(id);
     button?.addEventListener("click", () => {
@@ -439,6 +477,8 @@ function setupControls() {
     const moveKey = buildMoveKeyFromModifiers(base, event);
     enqueueMove(moveKey, { record: true, source: "keyboard" });
   });
+
+  updateTimerDisplay();
 }
 
 function setupTheme() {
@@ -447,28 +487,52 @@ function setupTheme() {
     return;
   }
 
-  const prefersLight = window.matchMedia?.("(prefers-color-scheme: light)")?.matches;
-  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-  const initialTheme = storedTheme || (prefersLight ? "light" : "dark");
-  applyTheme(initialTheme);
+  systemThemeMatcher = window.matchMedia("(prefers-color-scheme: dark)");
+  systemThemeMatcher.addEventListener("change", () => {
+    if (themeMode === "system") {
+      applyTheme("system");
+    }
+  });
+
+  const storedMode = localStorage.getItem(THEME_MODE_STORAGE_KEY);
+  themeMode = THEME_MODES.includes(storedMode || "") ? storedMode : "system";
+  applyTheme(themeMode);
 
   themeToggle.addEventListener("click", () => {
-    const current = document.body.dataset.theme === "light" ? "light" : "dark";
-    const next = current === "light" ? "dark" : "light";
-    applyTheme(next);
-    localStorage.setItem(THEME_STORAGE_KEY, next);
+    const currentIndex = THEME_MODES.indexOf(themeMode);
+    const nextMode = THEME_MODES[(currentIndex + 1) % THEME_MODES.length];
+    themeMode = nextMode;
+    localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
+    applyTheme(themeMode);
   });
 }
 
-function applyTheme(theme) {
-  document.body.dataset.theme = theme === "light" ? "light" : "dark";
+function applyTheme(mode) {
+  let appliedTheme = mode;
+  if (mode === "system") {
+    const prefersDark = systemThemeMatcher?.matches ?? false;
+    appliedTheme = prefersDark ? "dark" : "light";
+  }
+
+  document.body.dataset.theme = appliedTheme === "light" ? "light" : "dark";
+
   const themeToggle = document.getElementById("theme-toggle");
   if (themeToggle) {
-    themeToggle.textContent = theme === "light" ? "☀️" : "🌙";
+    themeToggle.textContent = THEME_ICONS[mode];
     themeToggle.setAttribute(
       "aria-label",
-      theme === "light" ? "ダークテーマに切り替え" : "ライトテーマに切り替え"
+      mode === "system"
+        ? "システム設定に同期しています"
+        : appliedTheme === "light"
+        ? "ライトテーマを使用中"
+        : "ダークテーマを使用中"
     );
+    themeToggle.title =
+      mode === "system"
+        ? "現在: システム同期 / クリックでライトモード"
+        : mode === "light"
+        ? "現在: ライトモード / クリックでダークモード"
+        : "現在: ダークモード / クリックでシステム同期";
   }
 }
 
@@ -620,15 +684,31 @@ function handleMoveCompletion(moveKey, options) {
   if (options.record) {
     moveHistory.push(moveKey);
     lastActionLabel = moveKey;
-    scrambleSequence = [];
+    startTimerIfNeeded();
   } else if (options.source === "undo") {
     lastActionLabel = options.undoneMove
       ? `一手戻し (${options.undoneMove})`
       : "一手戻し";
   } else if (options.source === "scramble") {
     lastActionLabel = `スクランブル (${moveKey})`;
+    resetTimer();
   } else {
-    lastActionLabel = moveKey;
+    lastActionLabel =
+      options.source === "autoSolve" ? "オートソルブ実行中" : moveKey;
+  }
+
+  if (!autoSolveInProgress && cube.is_solved()) {
+    stopTimer();
+  }
+
+  if (autoSolveInProgress && moveQueue.length === 0) {
+    autoSolveInProgress = false;
+    moveHistory = [];
+    scrambleSequence = [];
+    lastActionLabel = "オートソルブ完了";
+    stopTimer();
+    elapsedMs = 0;
+    updateTimerDisplay();
   }
 }
 
@@ -655,6 +735,8 @@ function scrambleCube() {
   scrambleSequence = sequence.slice();
   moveHistory = [];
   lastActionLabel = "スクランブル準備中";
+  autoSolveInProgress = false;
+  resetTimer();
   updateStatus();
 
   sequence.forEach((moveKey) => {
@@ -679,12 +761,41 @@ function undoLastMove() {
   updateStatus();
 }
 
+function autoSolve() {
+  if (!cube || isAnimating || moveQueue.length > 0) {
+    return;
+  }
+
+  const manualInverses = moveHistory
+    .slice()
+    .reverse()
+    .map(inverseMoveKey);
+  const scrambleInverses = scrambleSequence
+    .slice()
+    .reverse()
+    .map(inverseMoveKey);
+
+  const solution = manualInverses.concat(scrambleInverses);
+  if (solution.length === 0) {
+    return;
+  }
+
+  autoSolveInProgress = true;
+  stopTimer();
+  solution.forEach((moveKey) => {
+    enqueueMove(moveKey, { record: false, source: "autoSolve" });
+  });
+  updateStatus();
+}
+
 function resetCube() {
   moveQueue.length = 0;
   cube.reset();
   moveHistory = [];
   scrambleSequence = [];
   lastActionLabel = "リセット";
+  autoSolveInProgress = false;
+  resetTimer();
   createCube();
   updateStatus();
   renderScene();
@@ -740,7 +851,8 @@ function updateStatus() {
   }
 
   if (undoButton) {
-    undoButton.disabled = moveHistory.length === 0 || isAnimating || moveQueue.length > 0;
+    undoButton.disabled =
+      moveHistory.length === 0 || isAnimating || moveQueue.length > 0;
   }
 
   if (historyList) {
@@ -788,6 +900,7 @@ function onWindowResize() {
 function handlePointerDown(event) {
   if (isAnimating || moveQueue.length > 0) {
     pointerDownInfo = null;
+    orbitControls.enabled = true;
     return;
   }
 
@@ -795,12 +908,14 @@ function handlePointerDown(event) {
   const intersection = intersectCube();
   if (!intersection) {
     pointerDownInfo = null;
+    orbitControls.enabled = true;
     return;
   }
 
   const baseMove = determineMoveFromIntersection(intersection);
   if (!baseMove) {
     pointerDownInfo = null;
+    orbitControls.enabled = true;
     return;
   }
 
@@ -808,9 +923,13 @@ function handlePointerDown(event) {
     baseMove,
     startX: event.clientX,
     startY: event.clientY,
-    pointerEvent: event,
+    altKey: event.altKey,
+    shiftKey: event.shiftKey,
+    pointerId: event.pointerId,
   };
   pointerMoved = false;
+  orbitControls.enabled = false;
+  renderer.domElement.setPointerCapture?.(event.pointerId);
 }
 
 function handlePointerMove(event) {
@@ -820,21 +939,29 @@ function handlePointerMove(event) {
 
   const dx = event.clientX - pointerDownInfo.startX;
   const dy = event.clientY - pointerDownInfo.startY;
-  if (Math.hypot(dx, dy) > 6) {
+  if (!pointerMoved && Math.hypot(dx, dy) > 8) {
     pointerMoved = true;
+    orbitControls.enabled = true;
+    renderer.domElement.releasePointerCapture?.(pointerDownInfo.pointerId);
   }
 }
 
 function handlePointerUp(event) {
   if (!pointerDownInfo) {
+    orbitControls.enabled = true;
     return;
   }
 
   if (!pointerMoved) {
-    const moveKey = buildMoveKeyFromModifiers(pointerDownInfo.baseMove, event);
+    const moveKey = buildMoveKeyFromModifiers(pointerDownInfo.baseMove, {
+      altKey: pointerDownInfo.altKey,
+      shiftKey: pointerDownInfo.shiftKey,
+    });
     enqueueMove(moveKey, { record: true, source: "pointer" });
   }
 
+  renderer.domElement.releasePointerCapture?.(pointerDownInfo.pointerId);
+  orbitControls.enabled = true;
   pointerDownInfo = null;
   pointerMoved = false;
 }
@@ -860,7 +987,9 @@ function determineMoveFromIntersection(intersection) {
     return null;
   }
 
-  const ma = new THREE.Matrix3().getNormalMatrix(intersection.object.matrixWorld);
+  const ma = new THREE.Matrix3().getNormalMatrix(
+    intersection.object.matrixWorld
+  );
   const worldNormal = intersection.face.normal
     .clone()
     .applyMatrix3(ma)
@@ -885,6 +1014,10 @@ function determineMoveFromIntersection(intersection) {
   return null;
 }
 
+function inverseMoveKey(moveKey) {
+  return INVERSE_MOVE_MAP[moveKey] || moveKey;
+}
+
 function buildMoveKeyFromModifiers(baseMove, event) {
   if (event.altKey) {
     return `${baseMove}2`;
@@ -893,6 +1026,58 @@ function buildMoveKeyFromModifiers(baseMove, event) {
     return `${baseMove}'`;
   }
   return baseMove;
+}
+
+function startTimer() {
+  if (timerRunning) {
+    return;
+  }
+  timerRunning = true;
+  timerStart = performance.now() - elapsedMs;
+  timerInterval = window.setInterval(updateTimerDisplay, 100);
+  updateTimerDisplay();
+}
+
+function stopTimer() {
+  if (!timerRunning) {
+    return;
+  }
+  elapsedMs = performance.now() - timerStart;
+  timerRunning = false;
+  window.clearInterval(timerInterval);
+  timerInterval = null;
+  updateTimerDisplay();
+}
+
+function resetTimer() {
+  stopTimer();
+  elapsedMs = 0;
+  updateTimerDisplay();
+}
+
+function startTimerIfNeeded() {
+  if (!autoSolveInProgress && !timerRunning && elapsedMs === 0) {
+    startTimer();
+  }
+}
+
+function updateTimerDisplay() {
+  const timerDisplay = document.getElementById("timer-display");
+  if (!timerDisplay) {
+    return;
+  }
+  const ms = timerRunning ? performance.now() - timerStart : elapsedMs;
+  timerDisplay.textContent = formatTime(ms);
+}
+
+function formatTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  const tenths = Math.floor((ms % 1000) / 100);
+  return `${minutes}:${seconds}.${tenths}`;
 }
 
 initApp().catch(console.error);
