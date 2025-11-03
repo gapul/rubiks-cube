@@ -118,6 +118,7 @@ const INITIAL_CAMERA_POSITION = new THREE.Vector3(8, 8, 8);
 
 const ANIMATION_SETTINGS = {
   baseDuration: 320,
+  resetBaseDuration: 720,
   speed: 1,
   easing(t) {
     return 1 - Math.pow(1 - t, 3);
@@ -816,7 +817,7 @@ function resetView() {
   }
   isResettingView = true;
 
-  const duration = 420;
+  const duration = ANIMATION_SETTINGS.resetBaseDuration / ANIMATION_SETTINGS.speed;
   const start = performance.now();
 
   const startPosition = camera.position.clone();

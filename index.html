@@ -75,7 +75,7 @@
       height: 100vh;
       padding: clamp(10px, 1.5vw, 18px);
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(300px, 1fr);
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr);
       gap: clamp(10px, 1.4vw, 18px);
       position: relative;
       z-index: 1;
@@ -111,7 +111,7 @@
       padding: 10px 14px;
       background: rgba(15, 20, 36, 0.75);
       border: 1px solid rgba(255, 255, 255, 0.18);
-      color: var(--text-primary);
+      color: #ffffff;
       font-size: 13px;
       cursor: pointer;
       display: inline-flex;
@@ -167,13 +167,11 @@
     }
 
     .control-panel {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-      grid-auto-rows: min-content;
+      display: flex;
+      flex-wrap: wrap;
       gap: 12px;
       min-height: 0;
-      overflow: hidden;
-      align-content: start;
+      align-content: flex-start;
     }
 
     .control-card {
@@ -184,6 +182,8 @@
       border-radius: var(--panel-radius);
       background: var(--surface-primary);
       border: 1px solid var(--border-subtle);
+      flex: 1 1 320px;
+      min-width: 280px;
     }
 
     .control-card header {
@@ -397,13 +397,18 @@
     @media (max-width: 1080px) {
       .app-shell {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(320px, 0.8fr) minmax(0, 1fr);
+        grid-template-rows: minmax(320px, 0.75fr) minmax(0, 1fr);
         height: auto;
         min-height: 100vh;
       }
 
       .control-panel {
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        justify-content: center;
+      }
+
+      .control-card {
+        flex: 1 1 360px;
+        min-width: 260px;
       }
     }
 
@@ -413,8 +418,9 @@
         grid-template-rows: minmax(280px, 0.7fr) minmax(0, 1fr);
       }
 
-      .control-panel {
-        grid-template-columns: minmax(0, 1fr);
+      .control-card {
+        flex: 1 1 100%;
+        min-width: 0;
       }
 
       .control-card header {
@@ -540,12 +546,14 @@
           <span>キーボードとマウスで直感的に操作</span>
         </header>
         <div class="instructions">
+          <!--
           <div>
             <strong>マウス・タッチ操作</strong><br />
             • 左ドラッグ: 慣性付きで視点を回転<br />
             • ホイール: ズームイン / ズームアウト<br />
             • キューブをクリック: その面を回転 (Shiftで反時計回り / Altで180度)
           </div>
+          -->
           <div>
             <strong>キーボード</strong><br />
             F / R / U / B / L / D で各面を時計回り<br />
