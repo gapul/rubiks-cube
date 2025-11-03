@@ -140,6 +140,7 @@ let scrambleSequence = [];
 let lastActionLabel = "なし";
 let autoSolveInProgress = false;
 let scrambleInProgress = false;
+let isResettingView = false;
 
 let pointerDownInfo = null;
 let pointerMoved = false;
@@ -810,10 +811,39 @@ async function autoSolve() {
 }
 
 function resetView() {
-  camera.position.copy(INITIAL_CAMERA_POSITION);
-  orbitControls.target.set(0, 0, 0);
-  orbitControls.update();
-  renderScene();
+  if (isResettingView) {
+    return;
+  }
+  isResettingView = true;
+
+  const duration = 420;
+  const start = performance.now();
+
+  const startPosition = camera.position.clone();
+  const startTarget = orbitControls.target.clone();
+  const endTarget = new THREE.Vector3(0, 0, 0);
+
+  function animateReset(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+
+    camera.position.lerpVectors(startPosition, INITIAL_CAMERA_POSITION, eased);
+    orbitControls.target.lerpVectors(startTarget, endTarget, eased);
+    orbitControls.update();
+    renderScene();
+
+    if (t < 1) {
+      requestAnimationFrame(animateReset);
+    } else {
+      camera.position.copy(INITIAL_CAMERA_POSITION);
+      orbitControls.target.copy(endTarget);
+      orbitControls.update();
+      renderScene();
+      isResettingView = false;
+    }
+  }
+
+  requestAnimationFrame(animateReset);
 }
 
 function animate() {

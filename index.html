@@ -103,6 +103,33 @@
       min-height: 0;
     }
 
+    .reset-view-button {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(15, 20, 36, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: var(--text-primary);
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform var(--transition), background var(--transition);
+      backdrop-filter: blur(8px);
+    }
+
+    .reset-view-button:hover {
+      transform: translateY(-2px);
+      background: rgba(139, 157, 255, 0.28);
+    }
+
+    .reset-view-button:active {
+      transform: translateY(0);
+    }
+
     .canvas-wrap::after {
       content: "";
       position: absolute;
@@ -413,6 +440,9 @@
             tabindex="0"
             aria-label="ルービックキューブ 3D ビュー"></canvas>
         </div>
+        <button id="reset-view" class="reset-view-button" aria-label="ビューをリセット">
+          📷 ビューリセット
+        </button>
       </div>
       <div class="stage-footer">
         <span class="hint">クリックで面を操作 (Shift:逆回転 / Alt:180°)</span>
