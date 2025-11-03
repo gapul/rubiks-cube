@@ -269,6 +269,10 @@
                     スクランブル手数: <strong id="scramble-length-value">20</strong>
                 </label>
                 <input type="range" id="scramble-length" min="5" max="40" value="20">
+                <label for="animation-speed">
+                    アニメーション速度: <strong id="animation-speed-value">1.0x</strong>
+                </label>
+                <input type="range" id="animation-speed" min="0.5" max="2.5" step="0.1" value="1.0">
                 <div class="button-grid">
                     <button id="scramble">🎲 ランダムスクランブル</button>
                     <button id="undo" class="secondary">↩️ 一手戻す</button>
@@ -340,6 +344,7 @@
                 <div id="status-text">状態: 解かれています</div>
                 <div id="move-counter">手数: 0</div>
                 <div id="last-move" class="hint">直近の操作: なし</div>
+                <div id="queue-indicator" class="hint">待機中の操作: 0</div>
             </div>
 
             <div class="button-group">
@@ -349,17 +354,17 @@
 
             <div class="instructions">
                 <strong>操作説明:</strong><br>
-                • マウスでドラッグして回転<br>
-                • マウスホイールでズーム<br>
+                • 左ドラッグでカメラを回転（慣性付き）<br>
+                • ホイールでズーム<br>
                 • キーボードショートカットも利用可能<br>
-                • ボタンまたはキーでキューブを回転
+                • ボタンまたはキーでキューブの面を回転
                 
                 <div class="keyboard-hint">
                     <strong>キーボード:</strong><br>
                     F/R/U/B/L/D + Shift (反時計回り) + Alt (180度)
                 </div>
                 <div class="keyboard-hint">
-                    スクランブルや一手戻しで練習を効率化できます。
+                    スクランブルや一手戻し、速度調整で練習を効率化できます。
                 </div>
             </div>
         </div>
