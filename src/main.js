@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import init, { RubiksCube, Move } from "../pkg/rubiks_cube_wasm.js";
+import { initParticles } from "./particles";
+import { solveOptimal } from "./solver";
 
 const MOVE_KEY_TO_ENUM = {
   F: Move.F,
@@ -57,11 +59,6 @@ const SCRAMBLE_MOVES = Object.keys(MOVE_KEY_TO_ENUM);
 const HISTORY_CHUNK_SIZE = 12;
 const THEME_MODE_STORAGE_KEY = "rubiks-cube-theme-mode";
 const THEME_MODES = ["system", "light", "dark"];
-const THEME_ICONS = {
-  system: "🌗",
-  light: "☀️",
-  dark: "🌙",
-};
 
 const BASE_CUBIE_SIZE = 0.56;
 const STICKER_INSET = 0.08;
@@ -148,16 +145,29 @@ let pointerDownInfo = null;
 let pointerMoved = false;
 let systemThemeMatcher;
 let themeMode = "system";
+let themeControls = [];
 
 let timerInterval = null;
 let timerStart = 0;
 let elapsedMs = 0;
 let timerRunning = false;
 
+function normalizeMoveKey(moveKey) {
+  if (!moveKey) {
+    return "";
+  }
+  return moveKey
+    .toString()
+    .replace(/[’′]/g, "'")
+    .trim()
+    .toUpperCase();
+}
+
 async function initApp() {
   try {
     await init();
     cube = new RubiksCube();
+    initParticles();
     initThreeJS();
     createCube();
     setupControls();
@@ -432,22 +442,10 @@ function setupControls() {
   const autoSolveButton = document.getElementById("auto-solve");
   autoSolveButton?.addEventListener("click", () => {
     if (!isAnimating && moveQueue.length === 0) {
-      autoSolve();
+      autoSolve().catch((error) =>
+        console.error("Failed to perform auto solve:", error)
+      );
     }
-  });
-
-  document.getElementById("start-timer")?.addEventListener("click", () => {
-    if (!timerRunning) {
-      startTimer();
-    }
-  });
-
-  document.getElementById("stop-timer")?.addEventListener("click", () => {
-    stopTimer();
-  });
-
-  document.getElementById("reset-timer")?.addEventListener("click", () => {
-    resetTimer();
   });
 
   Object.keys(MOVE_KEY_TO_ENUM).forEach((id) => {
@@ -483,8 +481,10 @@ function setupControls() {
 }
 
 function setupTheme() {
-  const themeToggle = document.getElementById("theme-toggle");
-  if (!themeToggle) {
+  themeControls = Array.from(
+    document.querySelectorAll("[data-theme-mode]")
+  );
+  if (themeControls.length === 0) {
     return;
   }
 
@@ -499,12 +499,16 @@ function setupTheme() {
   themeMode = THEME_MODES.includes(storedMode || "") ? storedMode : "system";
   applyTheme(themeMode);
 
-  themeToggle.addEventListener("click", () => {
-    const currentIndex = THEME_MODES.indexOf(themeMode);
-    const nextMode = THEME_MODES[(currentIndex + 1) % THEME_MODES.length];
-    themeMode = nextMode;
-    localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
-    applyTheme(themeMode);
+  themeControls.forEach((button) => {
+    button.addEventListener("click", () => {
+      const selectedMode = button.dataset.themeMode;
+      if (!selectedMode || selectedMode === themeMode) {
+        return;
+      }
+      themeMode = selectedMode;
+      localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
+      applyTheme(themeMode);
+    });
   });
 }
 
@@ -517,39 +521,28 @@ function applyTheme(mode) {
 
   document.body.dataset.theme = appliedTheme === "light" ? "light" : "dark";
 
-  const themeToggle = document.getElementById("theme-toggle");
-  if (themeToggle) {
-    themeToggle.textContent = THEME_ICONS[mode];
-    themeToggle.setAttribute(
-      "aria-label",
-      mode === "system"
-        ? "システム設定に同期しています"
-        : appliedTheme === "light"
-        ? "ライトテーマを使用中"
-        : "ダークテーマを使用中"
-    );
-    themeToggle.title =
-      mode === "system"
-        ? "現在: システム同期 / クリックでライトモード"
-        : mode === "light"
-        ? "現在: ライトモード / クリックでダークモード"
-        : "現在: ダークモード / クリックでシステム同期";
-  }
+  themeControls.forEach((button) => {
+    const isActive = button.dataset.themeMode === mode;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
 }
 
 function enqueueMove(moveKey, options = {}) {
-  if (!MOVE_KEY_TO_ENUM[moveKey]) {
+  const normalizedMove = normalizeMoveKey(moveKey);
+  const mappedMove = MOVE_KEY_TO_ENUM[normalizedMove];
+  if (!mappedMove) {
     console.warn("Unknown move requested:", moveKey);
     return;
   }
 
   if (isAnimating) {
-    moveQueue.push({ moveKey, options });
+    moveQueue.push({ moveKey: normalizedMove, options });
     updateStatus();
     return;
   }
 
-  moveQueue.push({ moveKey, options });
+  moveQueue.push({ moveKey: normalizedMove, options });
   updateStatus();
   processMoveQueue();
 }
@@ -770,29 +763,44 @@ function undoLastMove() {
   updateStatus();
 }
 
-function autoSolve() {
+async function autoSolve() {
   if (!cube || isAnimating || moveQueue.length > 0) {
     return;
   }
 
-  const manualInverses = moveHistory
-    .slice()
-    .reverse()
-    .map(inverseMoveKey);
-  const scrambleInverses = scrambleSequence
-    .slice()
-    .reverse()
-    .map(inverseMoveKey);
+  const state = cube.get_state();
 
-  const solution = manualInverses.concat(scrambleInverses);
-  if (solution.length === 0) {
+  let solutionMoves = [];
+  try {
+    solutionMoves = await solveOptimal({
+      state,
+      history: moveHistory,
+      scramble: scrambleSequence,
+    });
+  } catch (error) {
+    console.warn("Optimal solver failed, falling back to recorded history.", error);
+  }
+
+  if (!solutionMoves || solutionMoves.length === 0) {
+    const manualInverses = moveHistory
+      .slice()
+      .reverse()
+      .map(inverseMoveKey);
+    const scrambleInverses = scrambleSequence
+      .slice()
+      .reverse()
+      .map(inverseMoveKey);
+    solutionMoves = manualInverses.concat(scrambleInverses);
+  }
+
+  if (!solutionMoves || solutionMoves.length === 0) {
     return;
   }
 
   autoSolveInProgress = true;
   scrambleInProgress = false;
   stopTimer();
-  solution.forEach((moveKey) => {
+  solutionMoves.forEach((moveKey) => {
     enqueueMove(moveKey, { record: false, source: "autoSolve" });
   });
   updateStatus();
@@ -915,6 +923,7 @@ function handlePointerDown(event) {
     return;
   }
 
+  event.preventDefault();
   setPointerFromEvent(event);
   const intersection = intersectCube();
   if (!intersection) {
@@ -948,6 +957,7 @@ function handlePointerMove(event) {
     return;
   }
 
+  event.preventDefault();
   const dx = event.clientX - pointerDownInfo.startX;
   const dy = event.clientY - pointerDownInfo.startY;
   if (!pointerMoved && Math.hypot(dx, dy) > 8) {
@@ -963,6 +973,7 @@ function handlePointerUp(event) {
     return;
   }
 
+  event.preventDefault();
   if (!pointerMoved) {
     const moveKey = buildMoveKeyFromModifiers(pointerDownInfo.baseMove, {
       altKey: pointerDownInfo.altKey,
@@ -1026,17 +1037,19 @@ function determineMoveFromIntersection(intersection) {
 }
 
 function inverseMoveKey(moveKey) {
-  return INVERSE_MOVE_MAP[moveKey] || moveKey;
+  const normalized = normalizeMoveKey(moveKey);
+  return INVERSE_MOVE_MAP[normalized] || normalized;
 }
 
 function buildMoveKeyFromModifiers(baseMove, event) {
+  const normalizedBase = normalizeMoveKey(baseMove);
   if (event.altKey) {
-    return `${baseMove}2`;
+    return normalizeMoveKey(`${normalizedBase}2`);
   }
   if (event.shiftKey) {
-    return `${baseMove}'`;
+    return normalizeMoveKey(`${normalizedBase}'`);
   }
-  return baseMove;
+  return normalizedBase;
 }
 
 function startTimer() {
